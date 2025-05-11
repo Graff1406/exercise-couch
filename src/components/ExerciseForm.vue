@@ -10,10 +10,9 @@
       </v-toolbar>
 
       <v-card-text class="mb-12">
-        <pre>
-      {{ formValues }}
-    </pre
-        >
+        <!-- <pre>
+          {{ formValues }}
+        </pre> -->
         <v-form ref="form" @submit.prevent="save">
           <v-text-field
             v-model="formValues.exerciseName"
@@ -45,7 +44,8 @@
                 <v-select
                   v-model="formValues.firstPhase"
                   :items="firstPhaseOptions"
-                  :item-title="'label'"
+                  item-title="label"
+                  item-value="value"
                   label="Начальная фаза"
                   hint="Какая фаза будет выполняться первой"
                   :rules="[rules.required]"
@@ -54,7 +54,8 @@
                 <v-select
                   v-model="formValues.concentricSpeed"
                   :items="speedOptions"
-                  :item-title="'label'"
+                  item-title="label"
+                  item-value="value"
                   label="Скорость сгибания"
                   hint="Скорость выполнения упражнения в фазе сокращения мышц"
                   :rules="[rules.required]"
@@ -70,13 +71,17 @@
                 </v-select>
                 <v-select
                   v-model="formValues.countdownDuration"
+                  :items="[1, 2, 3, 4, 5]"
                   hint="Время обратного отсчета перед началом упражнения"
                   :rules="[rules.required]"
                 >
                 </v-select>
                 <v-radio-group
-                  v-model="formValues.audioCues"
+                  v-model="audioCues"
                   label="Звуковые подсказки"
+                  hide-details
+                  hide-spin-buttons
+                  class="pa-0"
                 >
                   <v-radio
                     v-for="item in audioCueOptions"
@@ -109,10 +114,12 @@
                 >
                 </v-text-field>
                 <v-select
-                  v-model="formValues.backgroundMelody"
+                  v-model="formValues.backgroundMelodyLink"
                   :items="backgroundMelodyOptions"
                   label="Фоновая мелодия"
-                  :item-title="'label'"
+                  item-title="label"
+                  item-value="link"
+                  hint="Фон для упражнения"
                 >
                 </v-select>
               </v-expansion-panel-text>
@@ -123,6 +130,7 @@
                   v-model="formValues.pause"
                   :items="pauseDurationOptions"
                   :item-title="'label'"
+                  item-value="value"
                   label="Длительность паузы"
                   hint="Длительность длинной паузы в минутах и секундах"
                   :rules="[rules.required]"
@@ -181,29 +189,40 @@
 <script setup lang="ts">
 import { ref, defineEmits, computed, watch, reactive } from "vue";
 interface FormValues {
+  id: number;
   exerciseName: string;
   repetitions: number;
   concentricSpeed: number;
   eccentricSpeed: number;
   firstPhase: string;
-  audioCues: { value: string; label: string };
+  audioCues: string;
+  sets: number;
+  pause: number;
   countdownDuration: number;
   gifUrl: string;
-  backgroundMelody: { label: string; link: string };
+  backgroundMelodyLink: string;
+  audioStart: boolean;
+  audioEnd: boolean;
   audioEveryFifthRepetition: boolean;
-  pauseType: string;
   announcePauseDuration: boolean;
   announceNextExercise: boolean;
   announceCountdown: boolean;
   announcePauseEnd: boolean;
+  selectedForPlayer: boolean;
 }
+
+type Item = {
+  value: string;
+  label: string;
+};
+
 const props = defineProps({
   editMode: {
     type: Boolean,
     required: true,
   },
   editExercise: {
-    type: Object as () => FormValues | {},
+    type: Object as () => FormValues,
   },
 });
 const form = ref<any>(null);
@@ -211,19 +230,15 @@ const form = ref<any>(null);
 // вычисляемое свойство которое считает общее время упражнения
 const totalExerciseTime = computed(() => {
   return (
-    (formValues.value.concentricSpeed.value +
-      formValues.value.eccentricSpeed.value) *
+    (formValues.value.concentricSpeed +
+      formValues.value.eccentricSpeed) *
     formValues.value.repetitions
   );
 });
 
 const formattedTotalExerciseTime = computed(() => {
-  return formatMillisecondsToMinutesSeconds(totalExerciseTime.value);
+  return formatMillisecondsToMinutesSeconds(totalExerciseTime.value || 0);
 });
-
-const roundedTotalExerciseTime = computed(() =>
-  Math.round(totalExerciseTime.value / 1000)
-);
 
 const emit = defineEmits(["close", "save"]);
 const dialog = ref(true);
@@ -247,10 +262,6 @@ const backgroundMelodyOptions = [
   { label: "Melody 3", link: "/path/to/melody3.mp3" },
 ];
 
-const close = () => {
-  emit("close");
-};
-
 const exerciseNameRules = ref({
   required: (value: string) => !!value || "Обязательное поле",
   minLength: (value: string) =>
@@ -267,6 +278,9 @@ const audioCueOptions = reactive([
   { value: "breath", label: "Вдох/выдох" },
   { value: "both", label: "Движение/дыхание" },
 ]);
+
+const audioCues = ref<Item>(audioCueOptions[1]);
+
 const setsOptions = Array.from({ length: 10 }, (_, i) => i + 1);
 
 const formatMillisecondsToMinutesSeconds = (milliseconds: number) => {
@@ -290,39 +304,69 @@ const pauseDurationOptions = computed(() => {
   return options;
 });
 
-// Find the default 5-second pause object
-const defaultPauseObject = computed(() =>
-  pauseDurationOptions.value.find((option) => option.value === 5000)
-);
-
-const formValues = ref<FormValues>({
-  exerciseName: "", // Initialize with a default value
-  // Initialize with a default object matching the structure in firstPhaseOptions
-  firstPhase: { value: "concentric", label: "Сгибание" },
-  // Initialize with default values
-  sets: 3,
-  repetitions: 7,
-  concentricSpeed: speedOptions[1], // Initialize with the default object
-  eccentricSpeed: speedOptions[1], // Initialize with the default object
-  countdownDuration: 3,
-  audioCues: audioCueOptions[1], // Initialize with the default object
+const defaultFormValues = {
+  id: Math.floor(Math.random() * 1000000),
   gifUrl: "",
+  exerciseName: "",
+  sets: 3,
+  repetitions: 14,
+  countdownDuration: 3,
+  audioEnd: true,
   audioStart: true,
-  audioEveryFifthRepetition: true,
-  pause: defaultPauseObject.value, // Initialize with the default 5-second object
-  announcePauseDuration: true,
-  announceCountdown: true,
   announcePauseEnd: true,
-  backgroundMelody: backgroundMelodyOptions[0], // Initialize with a default selected object
-});
+  announceCountdown: true,
+  announceNextExercise: false,
+  announcePauseDuration: true,
+  audioEveryFifthRepetition: true,
+  selectedForPlayer: true,
+  audioCues: audioCueOptions[1]?.value,
+  eccentricSpeed: speedOptions[1]?.value,
+  firstPhase: firstPhaseOptions[0]?.value,
+  concentricSpeed: speedOptions[1]?.value,
+  pause: pauseDurationOptions.value[3]?.value,
+  backgroundMelodyLink: backgroundMelodyOptions[0]?.link || "",
+};
+
+const formValues = ref<FormValues>({ ...defaultFormValues });
+const validate = async () => {
+  if (isValid.value) {
+    save();
+  }
+};
+
+const close = () => {
+  emit("close");
+  dialog.value = false;
+  setTimeout(() => {
+    formValues.value = { ...defaultFormValues };
+  }, 1000);
+};
+
+const save = async () => {
+  const exercises = JSON.parse(localStorage.getItem("exercises") || "[]");
+  if (props.editMode) {
+    const exerciseIndex = exercises.findIndex(
+      (item: any) => item.exerciseName === props?.editExercise?.exerciseName
+    );
+    if (exerciseIndex > -1) {
+      exercises.splice(exerciseIndex, 1, formValues.value);
+      localStorage.setItem("exercises", JSON.stringify(exercises));
+    }
+  } else {
+    exercises.push(formValues.value);
+    localStorage.setItem("exercises", JSON.stringify(exercises));
+  }
+  emit("save");
+  close();
+};
+
 watch(
   () => props.editExercise,
-  (newValue) => {
+  (newValue: FormValues | {}) => {
     if (Object.keys(newValue).length > 0) {
       formValues.value = {
         ...(newValue as FormValues),
       };
-      console.log("formValues", formValues.value);
     }
   },
   { deep: true }
@@ -340,39 +384,9 @@ watch(
   },
   { deep: true, immediate: true }
 );
-const validate = async () => {
-  if (isValid.value) {
-    save();
-  }
-};
-const save = async () => {
-  const exercises = JSON.parse(localStorage.getItem("exercises") || "[]");
-  if (props.editMode) {
-    const exerciseIndex = exercises.findIndex(
-      (item: any) => item.exerciseName === props.editExercise.exerciseName
-    );
-    if (exerciseIndex > -1) {
-      exercises.splice(exerciseIndex, 1, formValues.value);
-      localStorage.setItem("exercises", JSON.stringify(exercises));
-    }
-  } else {
-    exercises.push(formValues.value);
-    localStorage.setItem("exercises", JSON.stringify(exercises));
-  }
-  emit("save");
-  dialog.value = false;
-  close();
-  formValues.value.exerciseName = "";
-  formValues.value.concentricSpeed = speedOptions[1].value * 1000;
-  formValues.value.eccentricSpeed = speedOptions[1].value * 1000;
-  formValues.value.firstPhase = { value: "concentric", label: "Сгибание" };
-  formValues.value.countdownDuration = 3;
-  formValues.value.audioCues = audioCueOptions[1]; // Initialize with the default object
-  formValues.value.gifUrl = "";
-  formValues.value.repetitions = 7;
-  formValues.value.pause = defaultPauseObject.value; // Reset pause to default
 
-  formValues.value.sets = 3;
-};
+watch(audioCues, (movment: Item) => {
+  formValues.value.audioCues = movment.value;
+});
 </script>
 <style scoped></style>

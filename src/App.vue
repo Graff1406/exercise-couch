@@ -12,24 +12,28 @@ import {
   VListItem,
 } from "vuetify/components";
 import { Container, Draggable } from "vue3-smooth-dnd";
-type PlayerState = "idle" | "playing" | "paused";
+type PlayerState = "idle" | "playing" | "paused" | "reset";
 interface Exercise {
+  id: number;
   exerciseName: string;
   repetitions: number;
   concentricSpeed: number;
   eccentricSpeed: number;
   firstPhase: string;
+  audioCues: string;
+  sets: number;
+  pause: number;
   countdownDuration: number;
-  audioStart: boolean;
-  audioCues: { value: string; label: string };
   gifUrl: string;
-  backgroundMelody: string;
+  backgroundMelodyLink: string;
+  audioStart: boolean;
   audioEnd: boolean;
   audioEveryFifthRepetition: boolean;
-  sets: number;
-  pauseType?: string; // Optional pause properties
+  announcePauseDuration: boolean;
+  announceNextExercise: boolean;
+  announceCountdown: boolean;
+  announcePauseEnd: boolean;
   selectedForPlayer: boolean;
-  pause: { value: number; label: string };
 }
 
 const showForm = ref(false);
@@ -37,6 +41,7 @@ const exercises = ref<Exercise[]>([]);
 
 const playerState = ref<PlayerState>("idle");
 const editExercise = ref<Partial<Exercise>>({});
+const groupExercises = ref<number[]>([]);
 const editMode = ref(false);
 
 const loadExercises = () => {
@@ -63,11 +68,6 @@ const pausePlayer = () => {
 
 const resetPlayer = () => {
   playerState.value = "idle";
-};
-
-const handleSave = (savedExercise: Exercise) => {
-  savedExercise.selectedForPlayer = true; // Ensure selectedForPlayer is true for new exercises
-  showForm.value = true;
 };
 
 const calculateTotalExerciseTime = (
@@ -102,9 +102,8 @@ const onDrop = (dropResult: any) => {
 };
 
 const handleEdit = (exercise: Exercise) => {
-  editMode.value = true;
+  editMode.value = showForm.value = true;
   editExercise.value = exercise;
-  console.log(exercise);
 };
 
 const handleDelete = (exercise: Exercise) => {
@@ -118,23 +117,12 @@ const handleDelete = (exercise: Exercise) => {
       parsedExercises.splice(index, 1);
       localStorage.setItem("exercises", JSON.stringify(parsedExercises));
       exercises.value = parsedExercises.map((exercise: Exercise) => ({
-        // Ensure selectedForPlayer is true
         ...exercise,
         selectedForPlayer: true,
       }));
     }
   }
 };
-onMounted(() => {
-  const storedExercises = localStorage.getItem("exercises");
-  if (storedExercises) {
-    exercises.value = JSON.parse(storedExercises).map((exercise: Exercise) => ({
-      ...exercise,
-      selectedForPlayer: true, // Always initialize selectedForPlayer to true
-    }));
-  }
-  console.log(111, exercises.value);
-});
 
 // Computed properties for footer info
 const selectedExercises = computed(() => {
@@ -144,17 +132,6 @@ const selectedExercises = computed(() => {
 const totalSelectedExercises = computed(() => {
   return selectedExercises.value.length;
 });
-
-const parseTimeToSeconds = (timeString: string): number => {
-  if (typeof timeString !== "string") {
-    return 0;
-  }
-  const parts = timeString.split(":").map(Number);
-  if (parts.length === 2) {
-    return parts[0] * 60 + parts[1];
-  }
-  return 0; // Handle invalid format
-};
 
 const formatTime = (totalSeconds: number): string => {
   if (totalSeconds < 60) {
@@ -168,12 +145,12 @@ const formatTime = (totalSeconds: number): string => {
 
 const totalExercisesDuration = computed(() => {
   let totalTime = 0;
-  selectedExercises.value.forEach((ex) => {
+  selectedExercises.value.forEach((ex: Exercise) => {
     const sets = ex?.sets || 0;
     const repetitions = ex?.repetitions || 0;
-    const concentric = ex?.concentricSpeed?.value || 0;
-    const eccentric = ex?.eccentricSpeed?.value || 0;
-    const pause = ex?.pause?.value || 0;
+    const concentric = ex?.concentricSpeed || 0;
+    const eccentric = ex?.eccentricSpeed || 0;
+    const pause = ex?.pause || 0;
 
     const exercise = (concentric + eccentric) * repetitions * sets;
     const totalPause = pause * sets;
@@ -182,6 +159,19 @@ const totalExercisesDuration = computed(() => {
     totalTime += exerciseTime;
   });
   return totalTime / 1000;
+});
+
+onMounted(() => {
+  const storedExercises = localStorage.getItem("exercises");
+  if (storedExercises) {
+    exercises.value = JSON.parse(storedExercises).map((exercise: Exercise) => ({
+      ...exercise,
+      selectedForPlayer: true, // Always initialize selectedForPlayer to true
+    }));
+  } else {
+    exercises.value = [];
+    groupExercises.value = [];
+  }
 });
 </script>
 
@@ -212,7 +202,7 @@ const totalExercisesDuration = computed(() => {
               v-for="(exercise, index) in exercises"
               :key="index"
             >
-              <v-col cols="12" class="drag-handle">
+              <v-col cols="12" class="drag-handle pt-0">
                 <v-card variant="tonal" color="indigo">
                   <v-card-title class="d-flex align-center">
                     <v-checkbox
@@ -264,8 +254,8 @@ const totalExercisesDuration = computed(() => {
                             ><span
                               >{{
                                 calculateTotalExerciseTime(
-                                  exercise.concentricSpeed.value,
-                                  exercise.eccentricSpeed.value,
+                                  exercise.concentricSpeed,
+                                  exercise.eccentricSpeed,
                                   exercise.repetitions
                                 )
                               }}
@@ -276,7 +266,7 @@ const totalExercisesDuration = computed(() => {
                             ><span
                               >{{
                                 formatMillisecondsToMinutesSeconds(
-                                  exercise.pause.value
+                                  exercise.pause
                                 )
                               }}
                             </span>
@@ -293,65 +283,72 @@ const totalExercisesDuration = computed(() => {
       </v-container>
     </v-main>
 
-    <v-footer app fixed class="d-flex flex-column">
-      <div v-if="playerState === 'idle' || playerState === 'reset'">
-        <v-btn
-          icon
-          large
-          color="indigo"
-          variant="plain"
-          class="mx-2"
-          @click="startPlayer"
-        >
-          <v-icon>mdi-play</v-icon>
-        </v-btn>
-      </div>
-      <div v-if="playerState === 'playing'">
-        <v-btn
-          icon
-          large
-          color="indigo"
-          variant="plain"
-          class="mx-2"
-          @click="pausePlayer"
-        >
-          <v-icon>mdi-pause</v-icon>
-        </v-btn>
-        <v-btn
-          icon
-          large
-          color="indigo"
-          variant="plain"
-          class="mx-2"
-          @click="resetPlayer"
-        >
-          <v-icon>mdi-restart</v-icon>
-        </v-btn>
-      </div>
-      <div v-if="playerState === 'paused'">
-        <v-btn
-          icon
-          large
-          color="indigo"
-          variant="plain"
-          class="mx-2"
-          @click="startPlayer"
-        >
-          <v-icon>mdi-play</v-icon>
-        </v-btn>
-        <v-btn
-          icon
-          large
-          color="indigo"
-          variant="plain"
-          class="mx-2"
-          @click="resetPlayer"
-        >
-          <v-icon>mdi-restart</v-icon>
-        </v-btn>
+    <v-footer app fixed class="d-flex flex-column" elevation="3" style="border-radius: 16px 16px 0 0">
+      <div class="pb-1">
+        <div v-if="playerState === 'idle' || playerState === 'reset'">
+          <v-btn
+            icon
+            large
+            color="indigo"
+            variant="plain"
+            density="comfortable"
+            class="mx-2"
+            @click="startPlayer"
+          >
+            <v-icon>mdi-play</v-icon>
+          </v-btn>
+        </div>
+        <div v-if="playerState === 'playing'">
+          <v-btn
+            icon
+            large
+            color="indigo"
+            variant="plain"
+            density="comfortable"
+            class="mx-2"
+            @click="pausePlayer"
+          >
+            <v-icon>mdi-pause</v-icon>
+          </v-btn>
+          <v-btn
+            icon
+            large
+            color="indigo"
+            variant="plain"
+            density="comfortable"
+            class="mx-2"
+            @click="resetPlayer"
+          >
+            <v-icon>mdi-restart</v-icon>
+          </v-btn>
+        </div>
+        <div v-if="playerState === 'paused'">
+          <v-btn
+            icon
+            large
+            color="indigo"
+            variant="plain"
+            density="comfortable"
+            class="mx-2"
+            @click="startPlayer"
+          >
+            <v-icon>mdi-play</v-icon>
+          </v-btn>
+          <v-btn
+            icon
+            large
+            color="indigo"
+            variant="plain"
+            density="comfortable"
+            class="mx-2"
+            @click="resetPlayer"
+          >
+            <v-icon>mdi-restart</v-icon>
+          </v-btn>
+        </div>
       </div>
       <div class="w-100"><v-divider></v-divider></div>
-      <div class="mt-2 text-caption w-100 d-flex justify-space-between">
+      <div class="pt-2 text-caption w-100 d-flex justify-space-between">
         <p>Выбрано упражнений: {{ totalSelectedExercises }}</p>
         <v-divider vertical class="mx-1"></v-divider>
         <p>Общее время: {{ formatTime(totalExercisesDuration) }}</p>
