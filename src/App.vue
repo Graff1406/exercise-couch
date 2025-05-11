@@ -36,6 +36,8 @@ interface Exercise {
   selectedForPlayer: boolean;
 }
 
+const backgroundAudio = ref<HTMLAudioElement | null>(null);
+
 const showForm = ref(false);
 const exercises = ref<Exercise[]>([]);
 
@@ -89,18 +91,48 @@ const resetCountdown = () => {
 const formattedCountdown = computed(() => formatTime(countdown.value));
 
 const startPlayer = () => {
+  const selected = exercises.value.filter(
+    (exercise) => exercise.selectedForPlayer
+  );
+  if (selected.length === 0) {
+    return; // Do nothing if no exercises are selected
+  }
+
   playerState.value = "playing";
-  startCountdown();
+
+  // Start background music from the first selected exercise
+  if (selected[0].backgroundMelodyLink) {
+ if (backgroundAudio.value) {
+ backgroundAudio.value.src = selected[0].backgroundMelodyLink;
+ backgroundAudio.value.play();
+    }
+  }
+  const utterance = new SpeechSynthesisUtterance(
+    `Начинаем тренировку. Первое упражнение: ${selected[0].exerciseName}. ${selected[0].sets} подходов по ${selected[0].repetitions} повторений. Концентрическая фаза ${selected[0].concentricSpeed / 1000} секунды, эксцентрическая фаза ${selected[0].eccentricSpeed / 1000} секунды.`
+  );
+
+  utterance.onend = () => {
+    startCountdown(); // Start the countdown after vocalization
+  };
+  window.speechSynthesis.speak(utterance);
 };
 
 const pausePlayer = () => {
   playerState.value = "paused";
+  // Pause background audio
+  if (backgroundAudio.value) {
+ backgroundAudio.value.pause();
+  }
   pauseCountdown();
 };
 
 const resetPlayer = () => {
   playerState.value = "idle";
   resetCountdown();
+  // Stop background audio and clear vocalizations
+  if (backgroundAudio.value) {
+ backgroundAudio.value.pause();
+  }
 };
 
 const calculateTotalExerciseTime = (
@@ -329,6 +361,7 @@ onMounted(() => {
         </Container>
       </v-container>
     </v-main>
+    <audio ref="backgroundAudio" loop></audio>
 
     <v-footer app fixed class="d-flex flex-column" elevation="3" style="border-radius: 16px 16px 0 0" :class="[{'bg-success text-white': isPlayerStarted}, {'bg-warning text-white': playerState === 'paused'}]">
       <div class="pb-1">

@@ -257,7 +257,7 @@ const speedOptions = [
   { value: 2500, label: "Медленно (2.5 сек)" },
 ];
 const backgroundMelodyOptions = [
-  { label: "Melody 1", link: "/path/to/melody1.mp3" },
+  { label: "Melody 1", link: "https://soundcloud.com/block-zone-585441623/calming-meditation-1-hour-handpan-music-malte-marten?si=4fb550533c994c8dbc1015caedf76de4&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing" },
   { label: "Melody 2", link: "/path/to/melody2.mp3" },
   { label: "Melody 3", link: "/path/to/melody3.mp3" },
 ];
