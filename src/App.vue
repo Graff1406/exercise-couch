@@ -194,6 +194,12 @@ const totalExercisesDuration = computed(() => {
   return totalTime / 1000;
 });
 
+const isStartButtonDisabled = computed(() => {
+ return !exercises.value.some(
+    (exercise) => exercise.selectedForPlayer
+ );
+});
+
 const isPlayerStarted = computed(() => {
   return playerState.value === "playing";
 });
@@ -335,6 +341,7 @@ onMounted(() => {
             density="comfortable"
             class="mx-2"
             @click="startPlayer"
+ :disabled="isStartButtonDisabled"
           >
             <v-icon>mdi-play</v-icon>
           </v-btn>
