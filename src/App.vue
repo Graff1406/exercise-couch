@@ -138,7 +138,7 @@ const startSpeach = () => {
   speechSynthesis.speak(utterance);
 }
 
-const formattedCountdown = computed(() => formatTime(countdown.value));
+const formattedCountdown = computed(() => formatTime(countdown.value || totalExercisesDuration.value));
 
 const startPlayer = () => {
 
@@ -405,7 +405,11 @@ onMounted(() => {
     <audio ref="backgroundAudio" loop></audio>
 
     <v-footer app fixed class="d-flex flex-column" elevation="3" style="border-radius: 16px 16px 0 0" :class="[{'bg-success text-white': isPlayerStarted}, {'bg-warning text-white': playerState === 'paused'}]">
-      <div class="pb-1">
+      <div class="pb-1 w-100">
+        <div v-show="isPlayerStarted || isPlayerPaused" class="pb-2">
+          <p class="text-h5 mb-2">Грудь</p>
+          <v-divider></v-divider>
+        </div>
         <div v-if="playerState === 'idle' || playerState === 'reset'">
           <v-btn
             icon
