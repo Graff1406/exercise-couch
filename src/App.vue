@@ -22,6 +22,7 @@ interface Exercise {
   firstPhase: string;
   audioCues: string;
   sets: number;
+  completedSets: number;
   pause: number;
   countdownDuration: number;
   gifUrl: string;
@@ -40,6 +41,8 @@ const backgroundAudio = ref<HTMLAudioElement | null>(null);
 
 const showForm = ref(false);
 const exercises = ref<Exercise[]>([]);
+
+const currentExerciseIndex = ref(0);
 
 const playerState = ref<PlayerState>("idle");
 const editExercise = ref<Partial<Exercise>>({});
@@ -90,70 +93,108 @@ const resetCountdown = () => {
 
 const startMelody = () => {
   if (backgroundAudio.value) {
-    backgroundAudio.value.src = 'melodies/melody_1.mp3';
+    backgroundAudio.value.src = "melodies/melody_1.mp3";
     backgroundAudio.value.volume = 0.1;
     backgroundAudio.value.play();
   }
 };
 
-const startSpeach = () => {
-  let movment = 'up';
-  let isStartCountdown = false;
+const playerText = ref("Готов к запуску");
 
-  
+const updatePlayerText = () => {
+  const selected = exercises.value.filter(
+    (exercise) => exercise.selectedForPlayer
+  );
+  if (selected.length > 0 && currentExerciseIndex.value < selected.length) {
+    if (countdown.value > 0) {
+      // Display the name of the current exercise while the timer is running
+      playerText.value = selected[currentExerciseIndex.value].exerciseName;
+    } else if (currentExerciseIndex.value < selected.length) {
+      // Display "Перерыв" when the timer reaches zero between exercises
+      playerText.value = "Перерыв";
+    } else {
+      // Display a message when all exercises are completed
+      playerText.value = "Тренировка завершена!";
+    }
+  } else {
+    playerText.value = "Выберите упражнения для начала";
+  }
+};
+
+const startSpeach = (index: number) => {
   const selected = exercises.value.filter(
     (exercise) => exercise.selectedForPlayer
   );
   if (selected.length === 0) {
     return;
   }
-  
+
+  currentExerciseIndex.value = index;
+  updatePlayerText();
+
   const utterance = new SpeechSynthesisUtterance(
-    `Упражнение: ${selected[0].exerciseName}. ${selected[0].repetitions} повторений.`
+    `Упражнение: ${selected[index].exerciseName}. ${selected[index].repetitions} повторений.`
   );
   utterance.rate = 1.4;
 
+  let repetitionCount = 0;
+
   utterance.onend = () => {
-    if (movment === 'up') {
-      utterance.text = 'Вверх';
-      utterance.rate = 1.5;
-      movment = 'down';
+    repetitionCount++;
+
+    if (repetitionCount <= selected[index].repetitions) {
+      // Continue with repetitions
+      if (repetitionCount % 2 !== 0) {
+        utterance.text = "Вверх";
+        utterance.rate = 1.5;
+      } else {
+        utterance.text = "Вниз";
+        utterance.rate = 0.5;
+      }
+      speechSynthesis.speak(utterance);
     } else {
-      utterance.text = 'Вниз';
-      utterance.rate = 0.5;
-      movment = 'up';
+      // Move to the next exercise after repetitions are done
+      if (index < selected.length) {
+        // Display "Перерыв" before the next exercise starts
+        playerText.value = "Перерыв";
+        // Start the next exercise after a pause
+        setTimeout(() => {
+          startSpeach(index + 1);
+        }, selected[index].pause);
+      } else {
+        // All exercises completed
+        resetPlayer();
+      }
     }
-
-    speechSynthesis.speak(utterance);
-    if (!isStartCountdown) {
-      isStartCountdown = true;
-      startCountdown();
-    }
-
-    // utterance.text = 'Вниз';
-    // utterance.rate = 1;
-    // speechSynthesis.speak(utterance);
   };
 
+  // Start the countdown for the current exercise duration (including repetitions and sets)
+  countdown.value =
+    ((selected[index].concentricSpeed + selected[index].eccentricSpeed) *
+      selected[index].repetitions *
+      selected[index].sets) /
+    1000;
+  startCountdown();
   speechSynthesis.speak(utterance);
-}
+};
 
-const formattedCountdown = computed(() => formatTime(countdown.value || totalExercisesDuration.value));
+const formattedCountdown = computed(() =>
+  formatTime(countdown.value || totalExercisesDuration.value)
+);
+const playerTextDisplay = computed(() => playerText.value);
 
 const startPlayer = () => {
-
   playerState.value = "playing";
 
   startMelody();
-  startSpeach();
+  startSpeach(0); // Start with the first selected exercise
 };
 
 const countinuePlayer = () => {
-
   playerState.value = "playing";
 
   if (backgroundAudio.value) backgroundAudio.value.play();
-    speechSynthesis.resume();
+  speechSynthesis.resume();
 };
 
 const pausePlayer = () => {
@@ -163,6 +204,7 @@ const pausePlayer = () => {
     backgroundAudio.value.pause();
     speechSynthesis.pause();
   }
+  updatePlayerText();
   pauseCountdown();
 };
 
@@ -173,6 +215,7 @@ const resetPlayer = () => {
   if (backgroundAudio.value) {
     backgroundAudio.value.pause();
   }
+  updatePlayerText();
   speechSynthesis.cancel();
 };
 
@@ -268,9 +311,7 @@ const totalExercisesDuration = computed(() => {
 });
 
 const isStartButtonDisabled = computed(() => {
- return !exercises.value.some(
-    (exercise) => exercise.selectedForPlayer
- );
+  return !exercises.value.some((exercise) => exercise.selectedForPlayer);
 });
 
 const isPlayerStarted = computed(() => {
@@ -404,10 +445,20 @@ onMounted(() => {
     </v-main>
     <audio ref="backgroundAudio" loop></audio>
 
-    <v-footer app fixed class="d-flex flex-column" elevation="3" style="border-radius: 16px 16px 0 0" :class="[{'bg-success text-white': isPlayerStarted}, {'bg-warning text-white': playerState === 'paused'}]">
+    <v-footer
+      app
+      fixed
+      class="d-flex flex-column"
+      elevation="3"
+      style="border-radius: 16px 16px 0 0"
+      :class="[
+        { 'bg-success text-white': isPlayerStarted },
+        { 'bg-warning text-white': playerState === 'paused' },
+      ]"
+    >
       <div class="pb-1 w-100">
         <div v-show="isPlayerStarted || isPlayerPaused" class="pb-2">
-          <p class="text-h5 mb-2">Грудь</p>
+          <p class="text-h5 mb-2">{{ playerTextDisplay }}</p>
           <v-divider></v-divider>
         </div>
         <div v-if="playerState === 'idle' || playerState === 'reset'">
@@ -419,7 +470,7 @@ onMounted(() => {
             density="comfortable"
             class="mx-2"
             @click="startPlayer"
- :disabled="isStartButtonDisabled"
+            :disabled="isStartButtonDisabled"
           >
             <v-icon>mdi-play</v-icon>
           </v-btn>
@@ -470,8 +521,10 @@ onMounted(() => {
         </div>
       </div>
       <div class="w-100"><v-divider></v-divider></div>
-      <div class="pt-2 text-caption w-100 d-flex justify-space-between" >
-        <p v-if="!isPlayerStarted && !isPlayerPaused">Выбрано упражнений: {{ totalSelectedExercises }}</p>
+      <div class="pt-2 text-caption w-100 d-flex justify-space-between">
+        <p v-if="!isPlayerStarted && !isPlayerPaused">
+          Выбрано упражнений: {{ totalSelectedExercises }}
+        </p>
         <p v-else>Оставшееся время: {{ formattedCountdown }}</p>
         <v-divider vertical class="mx-1"></v-divider>
         <p>Общее время: {{ formatTime(totalExercisesDuration) }}</p>

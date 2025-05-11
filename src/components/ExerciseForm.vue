@@ -197,6 +197,7 @@ interface FormValues {
   firstPhase: string;
   audioCues: string;
   sets: number;
+  completedSets: number;
   pause: number;
   countdownDuration: number;
   gifUrl: string;
@@ -309,6 +310,7 @@ const defaultFormValues = {
   gifUrl: "",
   exerciseName: "",
   sets: 3,
+  completedSets: 0,
   repetitions: 14,
   countdownDuration: 3,
   audioEnd: true,
