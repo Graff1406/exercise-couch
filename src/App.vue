@@ -44,6 +44,9 @@ const editExercise = ref<Partial<Exercise>>({});
 const groupExercises = ref<number[]>([]);
 const editMode = ref(false);
 
+const countdown = ref(0);
+const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null);
+
 const loadExercises = () => {
   const storedExercises = localStorage.getItem("exercises");
   exercises.value = storedExercises ? JSON.parse(storedExercises) : [];
@@ -58,16 +61,46 @@ const closeForm = () => {
   editExercise.value = {};
 };
 
+const startCountdown = () => {
+  countdown.value = totalExercisesDuration.value;
+  countdownInterval.value = setInterval(() => {
+    if (countdown.value > 0) {
+      countdown.value -= 1;
+    } else {
+      clearInterval(countdownInterval.value!);
+      countdownInterval.value = null;
+      resetPlayer(); // Сбрасываем плеер, когда таймер достигает нуля
+    }
+  }, 1000);
+};
+
+const pauseCountdown = () => {
+  if (countdownInterval.value) {
+    clearInterval(countdownInterval.value);
+    countdownInterval.value = null;
+  }
+};
+
+const resetCountdown = () => {
+  pauseCountdown();
+  countdown.value = 0;
+};
+
+const formattedCountdown = computed(() => formatTime(countdown.value));
+
 const startPlayer = () => {
   playerState.value = "playing";
+  startCountdown();
 };
 
 const pausePlayer = () => {
   playerState.value = "paused";
+  pauseCountdown();
 };
 
 const resetPlayer = () => {
   playerState.value = "idle";
+  resetCountdown();
 };
 
 const calculateTotalExerciseTime = (
@@ -159,6 +192,14 @@ const totalExercisesDuration = computed(() => {
     totalTime += exerciseTime;
   });
   return totalTime / 1000;
+});
+
+const isPlayerStarted = computed(() => {
+  return playerState.value === "playing";
+});
+
+const isPlayerPaused = computed(() => {
+  return playerState.value === "paused";
 });
 
 onMounted(() => {
@@ -283,7 +324,7 @@ onMounted(() => {
       </v-container>
     </v-main>
 
-    <v-footer app fixed class="d-flex flex-column" elevation="3" style="border-radius: 16px 16px 0 0">
+    <v-footer app fixed class="d-flex flex-column" elevation="3" style="border-radius: 16px 16px 0 0" :class="[{'bg-success text-white': isPlayerStarted}, {'bg-warning text-white': playerState === 'paused'}]">
       <div class="pb-1">
         <div v-if="playerState === 'idle' || playerState === 'reset'">
           <v-btn
@@ -298,11 +339,10 @@ onMounted(() => {
             <v-icon>mdi-play</v-icon>
           </v-btn>
         </div>
-        <div v-if="playerState === 'playing'">
+        <div v-if="isPlayerStarted">
           <v-btn
             icon
             large
-            color="indigo"
             variant="plain"
             density="comfortable"
             class="mx-2"
@@ -313,20 +353,18 @@ onMounted(() => {
           <v-btn
             icon
             large
-            color="indigo"
             variant="plain"
             density="comfortable"
             class="mx-2"
             @click="resetPlayer"
           >
-            <v-icon>mdi-restart</v-icon>
+            <v-icon>mdi-stop</v-icon>
           </v-btn>
         </div>
-        <div v-if="playerState === 'paused'">
+        <div v-if="isPlayerPaused">
           <v-btn
             icon
             large
-            color="indigo"
             variant="plain"
             density="comfortable"
             class="mx-2"
@@ -337,19 +375,19 @@ onMounted(() => {
           <v-btn
             icon
             large
-            color="indigo"
             variant="plain"
             density="comfortable"
             class="mx-2"
             @click="resetPlayer"
           >
-            <v-icon>mdi-restart</v-icon>
+            <v-icon>mdi-stop</v-icon>
           </v-btn>
         </div>
       </div>
       <div class="w-100"><v-divider></v-divider></div>
-      <div class="pt-2 text-caption w-100 d-flex justify-space-between">
-        <p>Выбрано упражнений: {{ totalSelectedExercises }}</p>
+      <div class="pt-2 text-caption w-100 d-flex justify-space-between" >
+        <p v-if="!isPlayerStarted && !isPlayerPaused">Выбрано упражнений: {{ totalSelectedExercises }}</p>
+        <p v-else>Оставшееся время: {{ formattedCountdown }}</p>
         <v-divider vertical class="mx-1"></v-divider>
         <p>Общее время: {{ formatTime(totalExercisesDuration) }}</p>
       </div>
