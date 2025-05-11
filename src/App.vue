@@ -88,40 +88,80 @@ const resetCountdown = () => {
   countdown.value = 0;
 };
 
-const formattedCountdown = computed(() => formatTime(countdown.value));
+const startMelody = () => {
+  if (backgroundAudio.value) {
+    backgroundAudio.value.src = 'melodies/melody_1.mp3';
+    backgroundAudio.value.volume = 0.1;
+    backgroundAudio.value.play();
+  }
+};
 
-const startPlayer = () => {
+const startSpeach = () => {
+  let movment = 'up';
+  let isStartCountdown = false;
+
+  
   const selected = exercises.value.filter(
     (exercise) => exercise.selectedForPlayer
   );
   if (selected.length === 0) {
-    return; // Do nothing if no exercises are selected
+    return;
   }
+  
+  const utterance = new SpeechSynthesisUtterance(
+    `Упражнение: ${selected[0].exerciseName}. ${selected[0].repetitions} повторений.`
+  );
+  utterance.rate = 1.4;
+
+  utterance.onend = () => {
+    if (movment === 'up') {
+      utterance.text = 'Вверх';
+      utterance.rate = 1.5;
+      movment = 'down';
+    } else {
+      utterance.text = 'Вниз';
+      utterance.rate = 0.5;
+      movment = 'up';
+    }
+
+    speechSynthesis.speak(utterance);
+    if (!isStartCountdown) {
+      isStartCountdown = true;
+      startCountdown();
+    }
+
+    // utterance.text = 'Вниз';
+    // utterance.rate = 1;
+    // speechSynthesis.speak(utterance);
+  };
+
+  speechSynthesis.speak(utterance);
+}
+
+const formattedCountdown = computed(() => formatTime(countdown.value));
+
+const startPlayer = () => {
 
   playerState.value = "playing";
 
-  // Start background music from the first selected exercise
-  if (selected[0].backgroundMelodyLink) {
- if (backgroundAudio.value) {
- backgroundAudio.value.src = selected[0].backgroundMelodyLink;
- backgroundAudio.value.play();
-    }
-  }
-  const utterance = new SpeechSynthesisUtterance(
-    `Начинаем тренировку. Первое упражнение: ${selected[0].exerciseName}. ${selected[0].sets} подходов по ${selected[0].repetitions} повторений. Концентрическая фаза ${selected[0].concentricSpeed / 1000} секунды, эксцентрическая фаза ${selected[0].eccentricSpeed / 1000} секунды.`
-  );
+  startMelody();
+  startSpeach();
+};
 
-  utterance.onend = () => {
-    startCountdown(); // Start the countdown after vocalization
-  };
-  window.speechSynthesis.speak(utterance);
+const countinuePlayer = () => {
+
+  playerState.value = "playing";
+
+  if (backgroundAudio.value) backgroundAudio.value.play();
+    speechSynthesis.resume();
 };
 
 const pausePlayer = () => {
   playerState.value = "paused";
   // Pause background audio
   if (backgroundAudio.value) {
- backgroundAudio.value.pause();
+    backgroundAudio.value.pause();
+    speechSynthesis.pause();
   }
   pauseCountdown();
 };
@@ -131,8 +171,9 @@ const resetPlayer = () => {
   resetCountdown();
   // Stop background audio and clear vocalizations
   if (backgroundAudio.value) {
- backgroundAudio.value.pause();
+    backgroundAudio.value.pause();
   }
+  speechSynthesis.cancel();
 };
 
 const calculateTotalExerciseTime = (
@@ -408,7 +449,7 @@ onMounted(() => {
             variant="plain"
             density="comfortable"
             class="mx-2"
-            @click="startPlayer"
+            @click="countinuePlayer"
           >
             <v-icon>mdi-play</v-icon>
           </v-btn>
