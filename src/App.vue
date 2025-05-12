@@ -54,8 +54,9 @@ const currentIndex = ref(0)
 const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const utterance = new SpeechSynthesisUtterance()
 
-const speak = (text: string): Promise<void> => {
+const speak = (text: string, { rate = 1 } = { rate: 1 }): Promise<void> => {
   return new Promise((resolve) => {
+    utterance.rate = rate
     utterance.text = text
     utterance.onend = () => resolve()
     speechSynthesis.speak(utterance)
@@ -332,7 +333,7 @@ watch(exerciseInProgress, async (exercise: Exercise | null) => {
   const duration = (concentricSpeed + eccentricSpeed) * repetitions
 
   async function setMovmentDirection() {
-    await speak(movmentUp ? 'Вверх' : 'Вниз')
+    await speak(movmentUp ? 'Вверх' : 'Вниз', { rate: 0.5 })
     movmentUp = !movmentUp
     setMovmentDirection()
   }
@@ -343,9 +344,9 @@ watch(exerciseInProgress, async (exercise: Exercise | null) => {
     }
 
     if (countdownBeforeStart) {
-      await speak('Три')
-      await speak('Два')
-      await speak('Один')
+      await speak('Три', { rate: 0.7 })
+      await speak('Два', { rate: 0.7 })
+      await speak('Один', { rate: 0.7 })
       await speak('Старт')
     }
 
@@ -363,8 +364,9 @@ watch(exerciseInProgress, async (exercise: Exercise | null) => {
 
     if (announcePauseDuration && currentIndex.value < exercises.value.length) {
       isPause.value = true
-      await speak('Пауза началась')
-      await startCountdown(pause / 1000)
+      const puseInsecond = pause / 1000
+      await speak(`Пауза ${puseInsecond} секунд`)
+      await startCountdown(puseInsecond)
       if (announcePauseEnd) await speak('Пауза закончилась')
       isPause.value = false
       setCurrentExercise()
