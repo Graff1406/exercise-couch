@@ -70,8 +70,14 @@
                 >
                 </v-select>
                 <v-select
-                  v-model="formValues.countdownDuration"
-                  :items="[1, 2, 3, 4, 5]"
+                  v-model="formValues.countdownBeforeStart"
+                  :items="[
+                    { value: 3000, label: 'За 3 секунды' },
+                    { value: 5000, label: 'За 5 секунд' }
+                  ]"
+                  item-title="label"
+                  item-value="value"
+                  label="Объявить тренировку"
                   hint="Время обратного отсчета перед началом упражнения"
                   :rules="[rules.required]"
                 >
@@ -187,132 +193,133 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, computed, watch, reactive } from "vue";
+import { ref, defineEmits, computed, watch, reactive } from 'vue'
 interface FormValues {
-  id: number;
-  exerciseName: string;
-  repetitions: number;
-  concentricSpeed: number;
-  eccentricSpeed: number;
-  firstPhase: string;
-  audioCues: string;
-  sets: number;
-  completedSets: number;
-  pause: number;
-  countdownDuration: number;
-  gifUrl: string;
-  backgroundMelodyLink: string;
-  audioStart: boolean;
-  audioEnd: boolean;
-  audioEveryFifthRepetition: boolean;
-  announcePauseDuration: boolean;
-  announceNextExercise: boolean;
-  announceCountdown: boolean;
-  announcePauseEnd: boolean;
-  selectedForPlayer: boolean;
+  id: number
+  exerciseName: string
+  repetitions: number
+  concentricSpeed: number
+  eccentricSpeed: number
+  firstPhase: string
+  audioCues: string
+  sets: number
+  completedSets: number
+  pause: number
+  countdownBeforeStart: number
+  gifUrl: string
+  backgroundMelodyLink: string
+  audioStart: boolean
+  audioEnd: boolean
+  audioEveryFifthRepetition: boolean
+  announcePauseDuration: boolean
+  announceNextExercise: boolean
+  announceCountdown: boolean
+  announcePauseEnd: boolean
+  selectedForPlayer: boolean
 }
 
 type Item = {
-  value: string;
-  label: string;
-};
+  value: string
+  label: string
+}
 
 const props = defineProps({
   editMode: {
     type: Boolean,
-    required: true,
+    required: true
   },
   editExercise: {
-    type: Object as () => FormValues,
-  },
-});
-const form = ref<any>(null);
+    type: Object as () => FormValues
+  }
+})
+const form = ref<any>(null)
 
-// вычисляемое свойство которое считает общее время упражнения
 const totalExerciseTime = computed(() => {
   return (
-    (formValues.value.concentricSpeed +
-      formValues.value.eccentricSpeed) *
+    (formValues.value.concentricSpeed + formValues.value.eccentricSpeed) *
     formValues.value.repetitions
-  );
-});
+  )
+})
 
 const formattedTotalExerciseTime = computed(() => {
-  return formatMillisecondsToMinutesSeconds(totalExerciseTime.value || 0);
-});
+  return formatMillisecondsToMinutesSeconds(totalExerciseTime.value || 0)
+})
 
-const emit = defineEmits(["close", "save"]);
-const dialog = ref(true);
+const emit = defineEmits(['close', 'save'])
+const dialog = ref(true)
 
 const rules = ref({
-  required: (value: any) => !!value || "Обязательное поле",
-  min: (value: number) => value >= 3 || "Минимальное количество повторений 3",
-  minSets: (value: number) => value >= 1 || "Минимальное количество подходов 1",
+  required: (value: any) => !!value || 'Обязательное поле',
+  min: (value: number) => value >= 3 || 'Минимальное количество повторений 3',
+  minSets: (value: number) => value >= 1 || 'Минимальное количество подходов 1',
   maxSets: (value: number) =>
-    value <= 10 || "Максимальное количество подходов 10",
-});
+    value <= 10 || 'Максимальное количество подходов 10'
+})
 const speedOptions = [
-  { value: 1000, label: "Быстро (1 сек)" },
-  { value: 1500, label: "Нормально (1.5 сек)" },
-  { value: 2000, label: "Плавно (2 сек)" },
-  { value: 2500, label: "Медленно (2.5 сек)" },
-];
+  { value: 1000, label: 'Быстро (1 сек)' },
+  { value: 1500, label: 'Нормально (1.5 сек)' },
+  { value: 2000, label: 'Плавно (2 сек)' },
+  { value: 2500, label: 'Медленно (2.5 сек)' }
+]
 const backgroundMelodyOptions = [
-  { label: "Melody 1", link: "https://soundcloud.com/block-zone-585441623/calming-meditation-1-hour-handpan-music-malte-marten?si=4fb550533c994c8dbc1015caedf76de4&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing" },
-  { label: "Melody 2", link: "/path/to/melody2.mp3" },
-  { label: "Melody 3", link: "/path/to/melody3.mp3" },
-];
+  {
+    label: 'Melody 1',
+    link: 'https://soundcloud.com/block-zone-585441623/calming-meditation-1-hour-handpan-music-malte-marten?si=4fb550533c994c8dbc1015caedf76de4&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing'
+  },
+  { label: 'Melody 2', link: '/path/to/melody2.mp3' },
+  { label: 'Melody 3', link: '/path/to/melody3.mp3' }
+]
 
 const exerciseNameRules = ref({
-  required: (value: string) => !!value || "Обязательное поле",
+  required: (value: string) => !!value || 'Обязательное поле',
   minLength: (value: string) =>
-    value.length >= 3 || "Минимальная длина 3 символа",
-});
+    value.length >= 3 || 'Минимальная длина 3 символа'
+})
 
 const firstPhaseOptions = [
-  { value: "concentric", label: "Сгибание" },
-  { value: "eccentric", label: "Разгибание" },
-];
-const isValid = ref<boolean>(false);
+  { value: 'concentric', label: 'Сгибание' },
+  { value: 'eccentric', label: 'Разгибание' }
+]
+const isValid = ref<boolean>(false)
 const audioCueOptions = reactive([
-  { value: "movement", label: "Сгибание/расгибание" },
-  { value: "breath", label: "Вдох/выдох" },
-  { value: "both", label: "Движение/дыхание" },
-]);
+  { value: 'movement', label: 'Сгибание/расгибание' },
+  { value: 'breath', label: 'Вдох/выдох' },
+  { value: 'both', label: 'Движение/дыхание' }
+])
 
-const audioCues = ref<Item>(audioCueOptions[1]);
+const audioCues = ref<Item>(audioCueOptions[1])
 
-const setsOptions = Array.from({ length: 10 }, (_, i) => i + 1);
+const setsOptions = Array.from({ length: 10 }, (_, i) => i + 1)
 
 const formatMillisecondsToMinutesSeconds = (milliseconds: number) => {
-  const totalSeconds = Math.floor(milliseconds / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const formattedSeconds = seconds.toString().padStart(2, "0");
-  return `${minutes}:${formattedSeconds}`;
-};
+  const totalSeconds = Math.floor(milliseconds / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  const formattedSeconds = seconds.toString().padStart(2, '0')
+  return `${minutes}:${formattedSeconds}`
+}
 
 // Generate pause duration options
 const pauseDurationOptions = computed(() => {
-  const options = [];
+  const options = []
   for (let i = 5; i <= 300; i += 5) {
-    const value = i * 1000; // in milliseconds
-    const minutes = Math.floor(i / 60);
-    const seconds = i % 60;
-    const label = `${minutes}:${seconds.toString().padStart(2, "0")}`;
-    options.push({ value, label });
+    const value = i * 1000 // in milliseconds
+    const minutes = Math.floor(i / 60)
+    const seconds = i % 60
+    const label = `${minutes}:${seconds.toString().padStart(2, '0')}`
+    options.push({ value, label })
   }
-  return options;
-});
+  return options
+})
 
 const defaultFormValues = {
   id: Math.floor(Math.random() * 1000000),
-  gifUrl: "",
-  exerciseName: "",
+  gifUrl: '',
+  exerciseName: '',
   sets: 3,
   completedSets: 0,
   repetitions: 14,
-  countdownDuration: 3,
+  countdownBeforeStart: 3000,
   audioEnd: true,
   audioStart: true,
   announcePauseEnd: true,
@@ -326,69 +333,69 @@ const defaultFormValues = {
   firstPhase: firstPhaseOptions[0]?.value,
   concentricSpeed: speedOptions[1]?.value,
   pause: pauseDurationOptions.value[3]?.value,
-  backgroundMelodyLink: backgroundMelodyOptions[0]?.link || "",
-};
+  backgroundMelodyLink: backgroundMelodyOptions[0]?.link || ''
+}
 
-const formValues = ref<FormValues>({ ...defaultFormValues });
+const formValues = ref<FormValues>({ ...defaultFormValues })
 const validate = async () => {
   if (isValid.value) {
-    save();
+    save()
   }
-};
+}
 
 const close = () => {
-  emit("close");
-  dialog.value = false;
+  emit('close')
+  dialog.value = false
   setTimeout(() => {
-    formValues.value = { ...defaultFormValues };
-  }, 1000);
-};
+    formValues.value = { ...defaultFormValues }
+  }, 1000)
+}
 
 const save = async () => {
-  const exercises = JSON.parse(localStorage.getItem("exercises") || "[]");
+  const exercises = JSON.parse(localStorage.getItem('exercises') || '[]')
   if (props.editMode) {
     const exerciseIndex = exercises.findIndex(
       (item: any) => item.exerciseName === props?.editExercise?.exerciseName
-    );
+    )
     if (exerciseIndex > -1) {
-      exercises.splice(exerciseIndex, 1, formValues.value);
-      localStorage.setItem("exercises", JSON.stringify(exercises));
+      exercises.splice(exerciseIndex, 1, formValues.value)
+      localStorage.setItem('exercises', JSON.stringify(exercises))
     }
   } else {
-    exercises.push(formValues.value);
-    localStorage.setItem("exercises", JSON.stringify(exercises));
+    exercises.push(formValues.value)
+    localStorage.setItem('exercises', JSON.stringify(exercises))
   }
-  emit("save");
-  close();
-};
+  emit('save')
+  close()
+}
 
 watch(
   () => props.editExercise,
   (newValue: FormValues | {}) => {
     if (Object.keys(newValue).length > 0) {
       formValues.value = {
-        ...(newValue as FormValues),
-      };
+        ...(newValue as FormValues)
+      }
     }
   },
   { deep: true }
-);
+)
 
 watch(
   formValues,
   async () => {
     if (form.value) {
-      const { valid } = await form.value.validate();
-      isValid.value = valid;
+      const { valid } = await form.value.validate()
+      isValid.value = valid
     } else {
-      isValid.value = false;
+      isValid.value = false
     }
   },
   { deep: true, immediate: true }
-);
+)
 
 watch(audioCues, (movment: Item) => {
-  formValues.value.audioCues = movment.value;
-});
+  formValues.value.audioCues = movment.value
+})
 </script>
 <style scoped></style>

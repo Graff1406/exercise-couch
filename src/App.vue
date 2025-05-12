@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import ExerciseForm from "./components/ExerciseForm.vue";
-import { ref, watch, onMounted, computed } from "vue";
+import ExerciseForm from './components/ExerciseForm.vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import {
   VCard,
   VCardText,
@@ -9,186 +9,207 @@ import {
   VBtn,
   VMenu,
   VList,
-  VListItem,
-} from "vuetify/components";
-import { Container, Draggable } from "vue3-smooth-dnd";
-type PlayerState = "idle" | "playing" | "paused" | "reset";
+  VListItem
+} from 'vuetify/components'
+import { Container, Draggable } from 'vue3-smooth-dnd'
+type PlayerState = 'idle' | 'playing' | 'paused' | 'reset'
 interface Exercise {
-  id: number;
-  exerciseName: string;
-  repetitions: number;
-  concentricSpeed: number;
-  eccentricSpeed: number;
-  firstPhase: string;
-  audioCues: string;
-  sets: number;
-  pause: number;
-  countdownDuration: number;
-  gifUrl: string;
-  backgroundMelodyLink: string;
-  audioStart: boolean;
-  audioEnd: boolean;
-  audioEveryFifthRepetition: boolean;
-  announcePauseDuration: boolean;
-  announceNextExercise: boolean;
-  announceCountdown: boolean;
-  announcePauseEnd: boolean;
-  selectedForPlayer: boolean;
+  id: number
+  exerciseName: string
+  repetitions: number
+  concentricSpeed: number
+  eccentricSpeed: number
+  firstPhase: string
+  audioCues: string
+  sets: number
+  completedSets: number
+  pause: number
+  countdownBeforeStart: number
+  gifUrl: string
+  backgroundMelodyLink: string
+  audioStart: boolean
+  audioEnd: boolean
+  audioEveryFifthRepetition: boolean
+  announcePauseDuration: boolean
+  announceNextExercise: boolean
+  announceCountdown: boolean
+  announcePauseEnd: boolean
+  selectedForPlayer: boolean
 }
 
+const backgroundAudio = ref<HTMLAudioElement | null>(null)
 
-const backgroundAudio = ref<HTMLAudioElement | null>(null);
+const showForm = ref(false)
+const exercises = ref<Exercise[]>([])
+const isPause = ref(false)
 
-const showForm = ref(false);
-const exercises = ref<Exercise[]>([]);
-const isPause = ref(false);
+const playerState = ref<PlayerState>('idle')
+const editExercise = ref<Partial<Exercise>>({})
+const groupExercises = ref<number[]>([])
+const editMode = ref(false)
+const exerciseInProgress = ref<Exercise | null>(null)
 
-const playerState = ref<PlayerState>("idle");
-const editExercise = ref<Partial<Exercise>>({});
-const groupExercises = ref<number[]>([]);
-const editMode = ref(false);
-const exerciseInProgress = ref<Exercise | null>(null);
-const utterance = new SpeechSynthesisUtterance();
+const countdown = ref(0)
+const currentIndex = ref(0)
+const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
+const utterance = new SpeechSynthesisUtterance()
 
-const countdown = ref(0);
-const currentIndex = ref(0);
-const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null);
+const speak = (text: string): Promise<void> => {
+  return new Promise((resolve) => {
+    utterance.text = text
+    utterance.onend = () => resolve()
+    speechSynthesis.speak(utterance)
+  })
+}
 
 const setCurrentExercise = () => {
   if (currentIndex.value < exercises.value.length) {
-    exerciseInProgress.value = exercises.value[currentIndex.value];
-    currentIndex.value++;
+    exerciseInProgress.value = exercises.value[currentIndex.value]
+    currentIndex.value++
   } else {
     // Все упражнения пройдены
-    exerciseInProgress.value = null;
+    exerciseInProgress.value = null
   }
-};
+}
+
+const updateCompletedSets = (exerciseId: number, newValue: number) => {
+  const index = exercises.value.findIndex((e) => e.id === exerciseId)
+  if (index !== -1) {
+    exercises.value[index].completedSets = newValue
+  }
+}
 
 const loadExercises = () => {
-  const storedExercises = localStorage.getItem("exercises");
-  exercises.value = storedExercises ? JSON.parse(storedExercises) : [];
-};
+  const storedExercises = localStorage.getItem('exercises')
+  exercises.value = storedExercises ? JSON.parse(storedExercises) : []
+}
 
 const toggleForm = () => {
-  showForm.value = !showForm.value;
-};
+  showForm.value = !showForm.value
+}
 const closeForm = () => {
-  showForm.value = false;
-  editMode.value = false;
-  editExercise.value = {};
-};
+  showForm.value = false
+  editMode.value = false
+  editExercise.value = {}
+}
 
-const startCountdown = () => {
-  countdown.value = totalExercisesDuration.value;
-  countdownInterval.value = setInterval(() => {
-    if (countdown.value > 0) {
-      countdown.value -= 1;
-    } else {
-      clearInterval(countdownInterval.value!);
-      countdownInterval.value = null;
-      resetPlayer(); // Сбрасываем плеер, когда таймер достигает нуля
-    }
-  }, 1000);
-};
+// const createCountdown = (duration: number) => {
+
+// };
+
+const startCountdown = (duration?: number, callbackProcessing?: () => void) => {
+  return new Promise((resolve) => {
+    countdown.value = duration || totalExercisesDuration.value
+    countdownInterval.value = setInterval(() => {
+      if (countdown.value > 0) {
+        if (callbackProcessing) callbackProcessing()
+        countdown.value -= 1
+      } else {
+        clearInterval(countdownInterval.value!)
+        countdownInterval.value = null
+        resolve(true)
+      }
+    }, 1000)
+  })
+}
 
 const pauseCountdown = () => {
   if (countdownInterval.value) {
-    clearInterval(countdownInterval.value);
-    countdownInterval.value = null;
+    clearInterval(countdownInterval.value)
+    countdownInterval.value = null
   }
-};
+}
 
 const resetCountdown = () => {
-  pauseCountdown();
-  countdown.value = 0;
-};
+  pauseCountdown()
+  countdown.value = 0
+}
 
 const startMelody = () => {
   if (backgroundAudio.value) {
-    backgroundAudio.value.src = 'melodies/melody_1.mp3';
-    backgroundAudio.value.volume = 0.1;
-    backgroundAudio.value.play();
+    backgroundAudio.value.src = 'melodies/melody_1.mp3'
+    backgroundAudio.value.volume = 0.1
+    backgroundAudio.value.play()
   }
-};
-
-const startSpeach = (text: string) => {
-  console.log("Начало выполнения startSpeach: ", text)
-
-  
-  const selected = exercises.value.filter(
-    (exercise) => exercise.selectedForPlayer
-  );
-  if (selected.length === 0) {
-    return;
-  }
-  
-  utterance.text = text;
-
-  speechSynthesis.speak(utterance);
 }
 
-const formattedCountdown = computed(() => formatTime(countdown.value || totalExercisesDuration.value));
+// const startSpeach = (text: string) => {
+//   console.log('Начало выполнения startSpeach: ', text)
+
+//   const selected = exercises.value.filter(
+//     (exercise) => exercise.selectedForPlayer
+//   )
+//   if (selected.length === 0) {
+//     return
+//   }
+
+//   utterance.text = text
+
+//   speechSynthesis.speak(utterance)
+// }
+
+const formattedCountdown = computed(() =>
+  formatTime(countdown.value || totalExercisesDuration.value)
+)
 
 const startPlayer = () => {
+  playerState.value = 'playing'
 
-  playerState.value = "playing";
+  setCurrentExercise()
 
-  setCurrentExercise();
+  if (!exerciseInProgress.value) return
 
-  if (!exerciseInProgress.value) return;
-
-  startMelody();
-};
+  startMelody()
+}
 
 const countinuePlayer = () => {
+  playerState.value = 'playing'
 
-  playerState.value = "playing";
-
-  if (backgroundAudio.value) backgroundAudio.value.play();
-    speechSynthesis.resume();
-};
+  if (backgroundAudio.value) backgroundAudio.value.play()
+  speechSynthesis.resume()
+}
 
 const pausePlayer = () => {
-  playerState.value = "paused";
+  playerState.value = 'paused'
   // Pause background audio
   if (backgroundAudio.value) {
-    backgroundAudio.value.pause();
-    speechSynthesis.pause();
+    backgroundAudio.value.pause()
+    speechSynthesis.pause()
   }
-  pauseCountdown();
-};
+  pauseCountdown()
+}
 
 const resetPlayer = () => {
-  playerState.value = "idle";
-  resetCountdown();
+  playerState.value = 'idle'
+  resetCountdown()
   // Stop background audio and clear vocalizations
   if (backgroundAudio.value) {
-    backgroundAudio.value.load();
+    backgroundAudio.value.load()
   }
-  speechSynthesis.cancel();
-  exerciseInProgress.value = null;
-  currentIndex.value = 0;
-};
+  speechSynthesis.cancel()
+  exerciseInProgress.value = null
+  currentIndex.value = 0
+}
 
 const calculateTotalExerciseTime = (
   concentric: number,
   eccentric: number,
   repetitions: number
 ): string => {
-  const totalMs = (concentric + eccentric) * repetitions;
-  const totalSeconds = Math.round(totalMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
+  const totalMs = (concentric + eccentric) * repetitions
+  const totalSeconds = Math.round(totalMs / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
 
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-};
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
 
 function formatMillisecondsToMinutesSeconds(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
+  const totalSeconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
 
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 const onDrop = (dropResult: any) => {
@@ -197,178 +218,173 @@ const onDrop = (dropResult: any) => {
       dropResult.addedIndex,
       0,
       exercises.value.splice(dropResult.removedIndex, 1)[0]
-    );
+    )
   }
-};
+}
 
 const handleEdit = (exercise: Exercise) => {
-  editMode.value = showForm.value = true;
-  editExercise.value = exercise;
-};
+  editMode.value = showForm.value = true
+  editExercise.value = exercise
+}
 
 const handleDelete = (exercise: Exercise) => {
-  const storedExercises = localStorage.getItem("exercises");
+  const storedExercises = localStorage.getItem('exercises')
   if (storedExercises) {
-    const parsedExercises = JSON.parse(storedExercises) as Exercise[];
+    const parsedExercises = JSON.parse(storedExercises) as Exercise[]
     const index = parsedExercises.findIndex(
       (item) => item.exerciseName === exercise.exerciseName
-    );
+    )
     if (index > -1) {
-      parsedExercises.splice(index, 1);
-      localStorage.setItem("exercises", JSON.stringify(parsedExercises));
+      parsedExercises.splice(index, 1)
+      localStorage.setItem('exercises', JSON.stringify(parsedExercises))
       exercises.value = parsedExercises.map((exercise: Exercise) => ({
         ...exercise,
-        selectedForPlayer: true,
-      }));
+        selectedForPlayer: true
+      }))
     }
   }
-};
+}
 
 // Computed properties for footer info
 const selectedExercises = computed(() => {
-  return exercises.value.filter((exercise) => exercise.selectedForPlayer);
-});
+  return exercises.value.filter((exercise) => exercise.selectedForPlayer)
+})
 
 const totalSelectedExercises = computed(() => {
-  return selectedExercises.value.length;
-});
+  return selectedExercises.value.length
+})
 
 const formatTime = (totalSeconds: number): string => {
   if (totalSeconds < 60) {
-    return `${totalSeconds}`;
+    return `${totalSeconds}`
   } else {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
-};
+}
 
 const totalExercisesDuration = computed(() => {
-  let totalTime = 0;
+  let totalTime = 0
   selectedExercises.value.forEach((ex: Exercise) => {
-    const sets = ex?.sets || 0;
-    const repetitions = ex?.repetitions || 0;
-    const concentric = ex?.concentricSpeed || 0;
-    const eccentric = ex?.eccentricSpeed || 0;
-    const pause = ex?.pause || 0;
+    const sets = ex?.sets || 0
+    const repetitions = ex?.repetitions || 0
+    const concentric = ex?.concentricSpeed || 0
+    const eccentric = ex?.eccentricSpeed || 0
+    const pause = ex?.pause || 0
 
-    const exercise = (concentric + eccentric) * repetitions * sets;
-    const totalPause = pause * sets;
-    const exerciseTime = exercise + totalPause;
+    const exercise = (concentric + eccentric) * repetitions * sets
+    const totalPause = pause * sets
+    const exerciseTime = exercise + totalPause
 
-    totalTime += exerciseTime;
-  });
-  return totalTime / 1000;
-});
+    totalTime += exerciseTime
+  })
+  return totalTime / 1000
+})
 
 const isStartButtonDisabled = computed(() => {
- return !exercises.value.some(
-    (exercise) => exercise.selectedForPlayer
- );
-});
+  return !exercises.value.some((exercise) => exercise.selectedForPlayer)
+})
 
 const isPlayerStarted = computed(() => {
-  return playerState.value === "playing";
-});
+  return playerState.value === 'playing'
+})
 
 const isPlayerPaused = computed(() => {
-  return playerState.value === "paused";
-});
+  return playerState.value === 'paused'
+})
 
 onMounted(() => {
-  const storedExercises = localStorage.getItem("exercises");
+  const storedExercises = localStorage.getItem('exercises')
   if (storedExercises) {
     exercises.value = JSON.parse(storedExercises).map((exercise: Exercise) => ({
       ...exercise,
-      selectedForPlayer: true, // Always initialize selectedForPlayer to true
-    }));
+      selectedForPlayer: true // Always initialize selectedForPlayer to true
+    }))
   } else {
-    exercises.value = [];
-    groupExercises.value = [];
+    exercises.value = []
+    groupExercises.value = []
   }
-});
+})
 
-watch(exerciseInProgress, () => {
-  if (!exerciseInProgress.value) return;
-  let movmentUp = true;
+watch(exerciseInProgress, async (exercise: Exercise | null) => {
+  if (!exercise) return
+  let movmentUp = true
 
-  function setMovmentDirection () {
-    console.log(movmentUp)
-    startSpeach(movmentUp ? 'Вверх' : 'Вниз');
-    utterance.onend = () => {
-      movmentUp = !movmentUp;
-      setMovmentDirection();
+  const exerciseId = exercise.id
+  const exerciseName = exercise.exerciseName
+  const repetitions = exercise.repetitions
+  const sets = exercise.sets
+  const sompletedSets = exercise.completedSets
+  const pause = exercise.pause
+  const countdownBeforeStart = exercise.countdownBeforeStart
+  const audioStart = exercise.audioStart
+  const audioEnd = exercise.audioEnd
+  const audioEveryFifthRepetition = exercise.audioEveryFifthRepetition
+  const announcePauseDuration = exercise.announcePauseDuration
+  const announceNextExercise = exercise.announceNextExercise
+  const announcePauseEnd = exercise.announcePauseEnd
+  const eccentricSpeed = exercise.eccentricSpeed
+  const concentricSpeed = exercise.concentricSpeed
+  const firstPhase = exercise.firstPhase
+  const audioCues = exercise.audioCues
+
+  const duration = (concentricSpeed + eccentricSpeed) * repetitions
+
+  async function setMovmentDirection() {
+    await speak(movmentUp ? 'Вверх' : 'Вниз')
+    movmentUp = !movmentUp
+    setMovmentDirection()
+  }
+
+  async function handleBody() {
+    if (audioStart) {
+      await speak('Упражнение ' + exerciseName + ' начинается ')
     }
-  }
 
-  const startPreparationExerciseSpeach = () => {
-    utterance.onend = () => {
-      startSpeach("Три");
-      utterance.onend = () => {
-        startSpeach("Два");
-        utterance.onend = () => {
-          startSpeach("Один");
-          utterance.onend = () => {
-            startSpeach("Старт")
-            utterance.onend = () => {
-              startCountdown();
-              // startSpeach('Вверх');
-              setMovmentDirection();
-            }
-          }
-        }
+    if (countdownBeforeStart) {
+      await speak('Три')
+      await speak('Два')
+      await speak('Один')
+      await speak('Старт')
+    }
+
+    await startCountdown(duration / 1000, () => {
+      setMovmentDirection()
+      //
+      if (countdown.value % 5 === 0 && countdown.value <= duration / 1000) {
+        speak(`${Math.abs(countdown.value - duration / 1000 - 1)}`)
+      }
+    })
+
+    speechSynthesis.cancel()
+
+    if (audioEnd) await speak('Конец упражнения')
+
+    if (announcePauseDuration && currentIndex.value < exercises.value.length) {
+      isPause.value = true
+      await speak('Пауза началась')
+      await startCountdown(pause / 1000)
+      if (announcePauseEnd) await speak('Пауза закончилась')
+      isPause.value = false
+      setCurrentExercise()
+    } else if (currentIndex.value === exercises.value.length) {
+      await speak('Конец текущего сета')
+      if (sets !== sompletedSets) {
+        updateCompletedSets(exerciseId, sompletedSets + 1)
+        handleBody()
+      } else {
+        resetPlayer()
       }
     }
-  };
-
-  const timeCurrentEx = ((exerciseInProgress.value.eccentricSpeed + exerciseInProgress.value.concentricSpeed) * exerciseInProgress.value.repetitions) + exerciseInProgress.value.countdownDuration * 1000;
-
-  const pause = exerciseInProgress.value.pause;
-    console.log('Начало упражнения: ', Date.now())
-
-  setTimeout(() => {
-    if (!exerciseInProgress.value) return;
-    speechSynthesis.cancel();
-    console.info("----------")
-    console.info(`Конец выполнения упражнения: ${currentIndex.value}`, Date.now())
-
-      isPause.value = true;
-      startSpeach('Пауза');
-      utterance.onend = () => {}
-
-    if (currentIndex.value >= exercises.value.length) return;
-
-    setTimeout(() => {
-    console.info("Конец паузы упражнения: ", currentIndex.value)
-      // setCurrentExercise();
-
-      // speechSynthesis.cancel();
-
-      // startSpeach('зделай паузу');
-
-      speechSynthesis.cancel();
-
-      isPause.value = false;
-
-      pauseCountdown();
-
-      if (!exerciseInProgress.value) return;
-
-      startSpeach(`${exerciseInProgress.value.exerciseName}. ${exerciseInProgress.value.repetitions} повторений.`);
-
-      startPreparationExerciseSpeach();
-    }, pause);
-  }, timeCurrentEx);
-  
-  if (currentIndex.value === 1) {
-    console.log('Первый вызов startSpeach')
-    startSpeach(`${exerciseInProgress.value.exerciseName}. ${exerciseInProgress.value.repetitions} повторений`);
-    startPreparationExerciseSpeach();
   }
 
-  console.info('Конец выполнения watch для упражнения: ', currentIndex.value)
-
-});
+  try {
+    handleBody()
+  } catch (e) {
+    console.log(e)
+  }
+})
 </script>
 
 <template>
@@ -376,7 +392,7 @@ watch(exerciseInProgress, () => {
     <v-main>
       <v-container fluid class="pa-0">
         <v-btn color="indigo" @click="toggleForm" class="my-6" size="large">
-          {{ showForm ? "Скрыть форму" : "Добавить упражнение" }}
+          {{ showForm ? 'Скрыть форму' : 'Добавить упражнение' }}
         </v-btn>
         <ExerciseForm
           v-model="showForm"
@@ -480,14 +496,36 @@ watch(exerciseInProgress, () => {
     </v-main>
     <audio ref="backgroundAudio" loop></audio>
 
-    <v-footer app fixed class="d-flex flex-column" elevation="3" style="border-radius: 16px 16px 0 0" :class="[{'bg-success text-white': isPlayerStarted}, {'bg-warning text-white': playerState === 'paused'}]">
+    <v-footer
+      app
+      fixed
+      class="d-flex flex-column"
+      elevation="3"
+      style="border-radius: 16px 16px 0 0"
+      :class="[
+        { 'bg-success text-white': isPlayerStarted },
+        { 'bg-warning text-white': playerState === 'paused' }
+      ]"
+    >
       <div class="pb-1 w-100">
         <div v-show="isPlayerStarted || isPlayerPaused" class="pb-2">
-          <p class="text-h5 mb-2 d-flex justify-space-between align-center gap-2">
-            <span>{{ isPause && exerciseInProgress ? 'Пауза' : exerciseInProgress?.exerciseName }}</span>
-            <v-progress-circular :model-value="formattedCountdown" :rotate="360" :size="40" :width="5" color="white"></v-progress-circular>
+          <p
+            class="text-h5 mb-2 d-flex justify-space-between align-center gap-2"
+          >
+            <span>{{
+              isPause && exerciseInProgress
+                ? 'Пауза'
+                : exerciseInProgress?.exerciseName
+            }}</span>
+            <v-progress-circular
+              :model-value="formattedCountdown"
+              :rotate="360"
+              :size="40"
+              :width="5"
+              color="white"
+            ></v-progress-circular>
           </p>
-          
+
           <v-divider></v-divider>
         </div>
         <div v-if="playerState === 'idle' || playerState === 'reset'">
@@ -499,7 +537,7 @@ watch(exerciseInProgress, () => {
             density="comfortable"
             class="mx-2"
             @click="startPlayer"
- :disabled="isStartButtonDisabled"
+            :disabled="isStartButtonDisabled"
           >
             <v-icon>mdi-play</v-icon>
           </v-btn>
@@ -550,8 +588,10 @@ watch(exerciseInProgress, () => {
         </div>
       </div>
       <div class="w-100"><v-divider></v-divider></div>
-      <div class="pt-2 text-caption w-100 d-flex justify-space-between" >
-        <p v-if="!isPlayerStarted && !isPlayerPaused">Выбрано упражнений: {{ totalSelectedExercises }}</p>
+      <div class="pt-2 text-caption w-100 d-flex justify-space-between">
+        <p v-if="!isPlayerStarted && !isPlayerPaused">
+          Выбрано упражнений: {{ totalSelectedExercises }}
+        </p>
         <p v-else>Оставшееся время: {{ formattedCountdown }}</p>
         <v-divider vertical class="mx-1"></v-divider>
         <p>Общее время: {{ formatTime(totalExercisesDuration) }}</p>
