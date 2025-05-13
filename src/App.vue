@@ -64,8 +64,8 @@ const speak = (text: string, { rate = 1 } = { rate: 1 }): Promise<void> => {
 }
 
 const setCurrentExercise = () => {
-  if (currentIndex.value < exercises.value.length) {
-    exerciseInProgress.value = exercises.value[currentIndex.value]
+  if (currentIndex.value < selectedExercises.value.length) {
+    exerciseInProgress.value = selectedExercises.value[currentIndex.value]
     currentIndex.value++
   } else {
     // Все упражнения пройдены
@@ -74,9 +74,10 @@ const setCurrentExercise = () => {
 }
 
 const updateCompletedSets = (exerciseId: number, newValue: number) => {
-  const index = exercises.value.findIndex((e) => e.id === exerciseId)
+  const index = selectedExercises.value.findIndex((e) => e.id === exerciseId)
+  console.log('🚀 ~ updateCompletedSets ~ index:', index, exerciseId)
   if (index !== -1) {
-    exercises.value[index].completedSets = newValue
+    selectedExercises.value[index].completedSets = newValue
   }
 }
 
@@ -98,11 +99,14 @@ const closeForm = () => {
 
 // };
 
-const startCountdown = (duration?: number, callbackProcessing?: () => void) => {
+const startCountdown = (
+  interval: number = 1000,
+  callbackProcessing?: () => void
+) => {
   return new Promise((resolve) => {
-    countdown.value = duration || totalExercisesDuration.value
     countdownInterval.value = setInterval(() => {
-      if (countdown.value > 0) {
+      console.log(interval)
+      if (countdown.value >= 0) {
         if (callbackProcessing) callbackProcessing()
         countdown.value -= 1
       } else {
@@ -110,8 +114,33 @@ const startCountdown = (duration?: number, callbackProcessing?: () => void) => {
         countdownInterval.value = null
         resolve(true)
       }
-    }, 1000)
+    }, interval)
   })
+}
+
+const startCountRepetition = (interval: number = 1000, repetitions: number) => {
+  let count = 0
+  let countRepetitionInterval: ReturnType<typeof setInterval> | null = null
+
+  return {
+    counter: (callbackProcessing?: (count: number) => void) => {
+      return new Promise((resolve) => {
+        count++
+        if (callbackProcessing) callbackProcessing(count)
+
+        countRepetitionInterval = setInterval(() => {
+          count++
+          if (count <= repetitions) {
+            if (callbackProcessing) callbackProcessing(count)
+          } else {
+            clearInterval(countRepetitionInterval!)
+            countRepetitionInterval = null
+            resolve(true)
+          }
+        }, interval)
+      })
+    }
+  }
 }
 
 const pauseCountdown = () => {
@@ -124,14 +153,6 @@ const pauseCountdown = () => {
 const resetCountdown = () => {
   pauseCountdown()
   countdown.value = 0
-}
-
-const startMelody = () => {
-  if (backgroundAudio.value) {
-    backgroundAudio.value.src = 'melodies/melody_1.mp3'
-    backgroundAudio.value.volume = 0.1
-    backgroundAudio.value.play()
-  }
 }
 
 // const startSpeach = (text: string) => {
@@ -156,11 +177,7 @@ const formattedCountdown = computed(() =>
 const startPlayer = () => {
   playerState.value = 'playing'
 
-  setCurrentExercise()
-
-  if (!exerciseInProgress.value) return
-
-  startMelody()
+  exerciseInProgress.value = selectedExercises.value[currentIndex.value]
 }
 
 const countinuePlayer = () => {
@@ -190,6 +207,22 @@ const resetPlayer = () => {
   speechSynthesis.cancel()
   exerciseInProgress.value = null
   currentIndex.value = 0
+}
+
+const playBackgroundAudio = () => {
+  return {
+    play: (src: string, { volume = 0.3 } = {}) => {
+      if (!backgroundAudio.value) return
+      backgroundAudio.value.volume = volume
+      backgroundAudio.value.src = src
+      backgroundAudio.value.load()
+      backgroundAudio.value.play()
+    },
+    stop: () => {
+      if (!backgroundAudio.value) return
+      backgroundAudio.value.pause()
+    }
+  }
 }
 
 const calculateTotalExerciseTime = (
@@ -310,13 +343,13 @@ onMounted(() => {
 
 watch(exerciseInProgress, async (exercise: Exercise | null) => {
   if (!exercise) return
-  let movmentUp = true
 
   const exerciseId = exercise.id
   const exerciseName = exercise.exerciseName
+  console.log('🚀 ~ watch ~ exerciseName:', exerciseName, exerciseId)
   const repetitions = exercise.repetitions
   const sets = exercise.sets
-  const sompletedSets = exercise.completedSets
+  const completedSets = exercise.completedSets + 1
   const pause = exercise.pause
   const countdownBeforeStart = exercise.countdownBeforeStart
   const audioStart = exercise.audioStart
@@ -331,14 +364,12 @@ watch(exerciseInProgress, async (exercise: Exercise | null) => {
   const audioCues = exercise.audioCues
 
   const duration = (concentricSpeed + eccentricSpeed) * repetitions
-
-  async function setMovmentDirection() {
-    await speak(movmentUp ? 'Вверх' : 'Вниз', { rate: 0.5 })
-    movmentUp = !movmentUp
-    setMovmentDirection()
-  }
+  const movmentSpeed = concentricSpeed + eccentricSpeed
+  console.log('movmentSpeed,', movmentSpeed)
 
   async function handleBody() {
+    const audio = playBackgroundAudio()
+
     if (audioStart) {
       await speak('Упражнение ' + exerciseName + ' начинается ')
     }
@@ -350,34 +381,75 @@ watch(exerciseInProgress, async (exercise: Exercise | null) => {
       await speak('Старт')
     }
 
-    await startCountdown(duration / 1000, () => {
-      setMovmentDirection()
-      //
-      if (countdown.value % 5 === 0 && countdown.value <= duration / 1000) {
-        speak(`${Math.abs(countdown.value - duration / 1000 - 1)}`)
-      }
+    // Start exercise
+
+    audio.play('melodies/melody_1.mp3')
+
+    const repetition = startCountRepetition(movmentSpeed, repetitions)
+
+    await repetition.counter(async (count: number) => {
+      speak(`${count}`, { rate: 0.3 })
     })
 
-    speechSynthesis.cancel()
+    audio.stop()
 
-    if (audioEnd) await speak('Конец упражнения')
+    // End exercise
 
-    if (announcePauseDuration && currentIndex.value < exercises.value.length) {
+    // Start pause
+
+    if (
+      completedSets <= sets &&
+      currentIndex.value < selectedExercises.value.length
+    ) {
+      if (audioEnd) {
+        await speak('Конец упражнения')
+      }
+
       isPause.value = true
+
       const puseInsecond = pause / 1000
-      await speak(`Пауза ${puseInsecond} секунд`)
-      await startCountdown(puseInsecond)
-      if (announcePauseEnd) await speak('Пауза закончилась')
+
+      if (announcePauseDuration) await speak(`Пауза ${puseInsecond} секунд`)
+
+      audio.play('melodies/timer-tiking.mp3', { volume: 1 })
+
+      countdown.value = puseInsecond
+      await startCountdown()
+
+      audio.stop()
+
+      if (announcePauseEnd) {
+        await speak('Конец паузы')
+      }
+
       isPause.value = false
-      setCurrentExercise()
-    } else if (currentIndex.value === exercises.value.length) {
+    }
+
+    // End pause
+
+    // Next set
+
+    if (currentIndex.value === selectedExercises.value.length) {
+      // Check if the pause is for last exercise in set
+
       await speak('Конец текущего сета')
-      if (sets !== sompletedSets) {
-        updateCompletedSets(exerciseId, sompletedSets + 1)
+
+      const index = selectedExercises.value.findIndex(
+        (item) => item.sets > completedSets
+      )
+
+      // Mark the current exercise as completed
+
+      if (index != -1) {
+        currentIndex.value = index
+        setCurrentExercise()
         handleBody()
       } else {
         resetPlayer()
       }
+    } else {
+      updateCompletedSets(exerciseId, completedSets)
+      setCurrentExercise()
     }
   }
 
