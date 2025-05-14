@@ -64,6 +64,10 @@ const speak = (text: string, { rate = 1 } = { rate: 1 }): Promise<void> => {
 }
 
 const setCurrentExercise = () => {
+  console.log(
+    '🚀 ~ setCurrentExercise ~ currentIndex.value:',
+    currentIndex.value
+  )
   if (currentIndex.value < selectedExercises.value.length) {
     exerciseInProgress.value = selectedExercises.value[currentIndex.value]
     currentIndex.value++
@@ -71,6 +75,121 @@ const setCurrentExercise = () => {
     // Все упражнения пройдены
     exerciseInProgress.value = null
   }
+}
+
+const runExercise = async (exercise: Exercise, isPause: boolean) => {
+  if (!exercise) return
+
+  const exerciseName = exercise.exerciseName
+  const repetitions = exercise.repetitions
+  const pause = exercise.pause
+  const countdownBeforeStart = exercise.countdownBeforeStart
+  const audioStart = exercise.audioStart
+  const audioEnd = exercise.audioEnd
+  const audioEveryFifthRepetition = exercise.audioEveryFifthRepetition
+  const announcePauseDuration = exercise.announcePauseDuration
+  const announceNextExercise = exercise.announceNextExercise
+  const announcePauseEnd = exercise.announcePauseEnd
+  const eccentricSpeed = exercise.eccentricSpeed
+  const concentricSpeed = exercise.concentricSpeed
+  const firstPhase = exercise.firstPhase
+  const audioCues = exercise.audioCues
+
+  const movmentSpeed = concentricSpeed + eccentricSpeed
+
+  const audio = playBackgroundAudio()
+
+  try {
+    if (audioStart) {
+      await speak('Упражнение ' + exerciseName + ' начинается ')
+    }
+
+    if (countdownBeforeStart) {
+      await speak('Три', { rate: 0.7 })
+      await speak('Два', { rate: 0.7 })
+      await speak('Один', { rate: 0.7 })
+      await speak('Старт')
+    }
+
+    // Start exercise
+
+    audio.play('melodies/melody_1.mp3')
+
+    const repetition = startCountRepetition(movmentSpeed, repetitions)
+
+    await repetition.counter(async (count: number) => {
+      speak(`${count}`, { rate: 0.3 })
+    })
+
+    audio.stop()
+
+    // End exercise
+
+    // Start pause
+
+    if (isPause) {
+      if (audioEnd) {
+        await speak('Конец упражнения')
+      }
+
+      const puseInsecond = pause / 1000
+
+      if (announcePauseDuration) await speak(`Пауза ${puseInsecond} секунд`)
+
+      audio.play('melodies/timer-tiking.mp3', { volume: 1 })
+
+      await countdownPause(puseInsecond)
+
+      audio.stop()
+
+      if (announcePauseEnd) {
+        await speak('Конец паузы')
+      }
+    }
+  } catch (e) {
+    console.log(e)
+  }
+}
+
+const runExercises = async () => {
+  // Найти все незавершённые упражнения
+  const exercises = selectedExercises.value
+
+  while (true) {
+    // Найти упражнение с минимальным completedSets, которое ещё не завершено
+    const pendingExercises = exercises.filter(
+      (ex) => ex.completedSets < ex.sets
+    )
+
+    if (pendingExercises.length === 0) {
+      // Все подходы завершены
+      break
+    }
+
+    const nextExercise = pendingExercises.reduce((min, curr) =>
+      curr.completedSets < min.completedSets ? curr : min
+    )
+
+    // Определить, будет ли пауза после упражнения (если оно не последнее завершённое)
+    const isLastRemaining =
+      pendingExercises.length === 1 &&
+      nextExercise.completedSets + 1 === nextExercise.sets
+
+    // Запуск логики упражнения
+    await runExercise(nextExercise, !isLastRemaining)
+
+    // Увеличить completedSets
+    nextExercise.completedSets++
+
+    // Обновить реактивный массив (Vue 3)
+    const index = exercises.findIndex((ex) => ex.id === nextExercise.id)
+    if (index !== -1) {
+      selectedExercises.value[index] = { ...nextExercise }
+    }
+  }
+
+  // Всё завершено
+  await speak('Тренировка завершена')
 }
 
 const updateCompletedSets = (exerciseId: number, newValue: number) => {
@@ -115,6 +234,25 @@ const startCountdown = (
         resolve(true)
       }
     }, interval)
+  })
+}
+
+const countdownPause = (
+  duration: number,
+  callback?: (timeLeft: number) => void
+): Promise<void> => {
+  return new Promise((resolve) => {
+    let timeLeft = duration
+
+    const intervalId = setInterval(() => {
+      if (callback) callback(timeLeft)
+      timeLeft--
+
+      if (timeLeft < 0) {
+        clearInterval(intervalId)
+        resolve()
+      }
+    }, 1000)
   })
 }
 
@@ -177,7 +315,8 @@ const formattedCountdown = computed(() =>
 const startPlayer = () => {
   playerState.value = 'playing'
 
-  exerciseInProgress.value = selectedExercises.value[currentIndex.value]
+  // exerciseInProgress.value = selectedExercises.value[currentIndex.value]
+  runExercises()
 }
 
 const countinuePlayer = () => {
@@ -341,124 +480,123 @@ onMounted(() => {
   }
 })
 
-watch(exerciseInProgress, async (exercise: Exercise | null) => {
-  if (!exercise) return
+// watch(exerciseInProgress, async (exercise: Exercise | null) => {
+//   if (!exercise) return
 
-  const exerciseId = exercise.id
-  const exerciseName = exercise.exerciseName
-  console.log('🚀 ~ watch ~ exerciseName:', exerciseName, exerciseId)
-  const repetitions = exercise.repetitions
-  const sets = exercise.sets
-  const completedSets = exercise.completedSets + 1
-  const pause = exercise.pause
-  const countdownBeforeStart = exercise.countdownBeforeStart
-  const audioStart = exercise.audioStart
-  const audioEnd = exercise.audioEnd
-  const audioEveryFifthRepetition = exercise.audioEveryFifthRepetition
-  const announcePauseDuration = exercise.announcePauseDuration
-  const announceNextExercise = exercise.announceNextExercise
-  const announcePauseEnd = exercise.announcePauseEnd
-  const eccentricSpeed = exercise.eccentricSpeed
-  const concentricSpeed = exercise.concentricSpeed
-  const firstPhase = exercise.firstPhase
-  const audioCues = exercise.audioCues
+//   const exerciseId = exercise.id
+//   const exerciseName = exercise.exerciseName
+//   console.log('🚀 ~ watch ~ exerciseName:', exerciseName, exerciseId)
+//   const repetitions = exercise.repetitions
+//   const sets = exercise.sets
+//   const completedSets = exercise.completedSets + 1
+//   const pause = exercise.pause
+//   const countdownBeforeStart = exercise.countdownBeforeStart
+//   const audioStart = exercise.audioStart
+//   const audioEnd = exercise.audioEnd
+//   const audioEveryFifthRepetition = exercise.audioEveryFifthRepetition
+//   const announcePauseDuration = exercise.announcePauseDuration
+//   const announceNextExercise = exercise.announceNextExercise
+//   const announcePauseEnd = exercise.announcePauseEnd
+//   const eccentricSpeed = exercise.eccentricSpeed
+//   const concentricSpeed = exercise.concentricSpeed
+//   const firstPhase = exercise.firstPhase
+//   const audioCues = exercise.audioCues
 
-  const duration = (concentricSpeed + eccentricSpeed) * repetitions
-  const movmentSpeed = concentricSpeed + eccentricSpeed
-  console.log('movmentSpeed,', movmentSpeed)
+//   const duration = (concentricSpeed + eccentricSpeed) * repetitions
+//   const movmentSpeed = concentricSpeed + eccentricSpeed
+//   console.log('movmentSpeed,', movmentSpeed)
 
-  async function handleBody() {
-    const audio = playBackgroundAudio()
+//   async function handleBody() {
+//     const audio = playBackgroundAudio()
 
-    if (audioStart) {
-      await speak('Упражнение ' + exerciseName + ' начинается ')
-    }
+//     if (audioStart) {
+//       await speak('Упражнение ' + exerciseName + ' начинается ')
+//     }
 
-    if (countdownBeforeStart) {
-      await speak('Три', { rate: 0.7 })
-      await speak('Два', { rate: 0.7 })
-      await speak('Один', { rate: 0.7 })
-      await speak('Старт')
-    }
+//     if (countdownBeforeStart) {
+//       await speak('Три', { rate: 0.7 })
+//       await speak('Два', { rate: 0.7 })
+//       await speak('Один', { rate: 0.7 })
+//       await speak('Старт')
+//     }
 
-    // Start exercise
+//     // Start exercise
 
-    audio.play('melodies/melody_1.mp3')
+//     audio.play('melodies/melody_1.mp3')
 
-    const repetition = startCountRepetition(movmentSpeed, repetitions)
+//     const repetition = startCountRepetition(movmentSpeed, repetitions)
 
-    await repetition.counter(async (count: number) => {
-      speak(`${count}`, { rate: 0.3 })
-    })
+//     await repetition.counter(async (count: number) => {
+//       speak(`${count}`, { rate: 0.3 })
+//     })
 
-    audio.stop()
+//     audio.stop()
 
-    // End exercise
+//     // End exercise
 
-    // Start pause
+//     // Start pause
 
-    if (
-      completedSets <= sets &&
-      currentIndex.value < selectedExercises.value.length
-    ) {
-      if (audioEnd) {
-        await speak('Конец упражнения')
-      }
+//     if (
+//       completedSets <= sets &&
+//       currentIndex.value < selectedExercises.value.length
+//     ) {
+//       if (audioEnd) {
+//         await speak('Конец упражнения')
+//       }
 
-      isPause.value = true
+//       isPause.value = true
 
-      const puseInsecond = pause / 1000
+//       const puseInsecond = pause / 1000
 
-      if (announcePauseDuration) await speak(`Пауза ${puseInsecond} секунд`)
+//       if (announcePauseDuration) await speak(`Пауза ${puseInsecond} секунд`)
 
-      audio.play('melodies/timer-tiking.mp3', { volume: 1 })
+//       audio.play('melodies/timer-tiking.mp3', { volume: 1 })
 
-      countdown.value = puseInsecond
-      await startCountdown()
+//       await countdownPause(puseInsecond)
 
-      audio.stop()
+//       audio.stop()
 
-      if (announcePauseEnd) {
-        await speak('Конец паузы')
-      }
+//       if (announcePauseEnd) {
+//         await speak('Конец паузы')
+//       }
 
-      isPause.value = false
-    }
+//       isPause.value = false
+//     }
 
-    // End pause
+//     // End pause
 
-    // Next set
+//     // Next set
 
-    if (currentIndex.value === selectedExercises.value.length) {
-      // Check if the pause is for last exercise in set
+//     if (currentIndex.value === selectedExercises.value.length) {
+//       // Check if the pause is for last exercise in set
 
-      await speak('Конец текущего сета')
+//       await speak('Конец текущего сета')
 
-      const index = selectedExercises.value.findIndex(
-        (item) => item.sets > completedSets
-      )
+//       const index = selectedExercises.value.findIndex(
+//         (item) => item.sets > completedSets
+//       )
 
-      // Mark the current exercise as completed
+//       // Mark the current exercise as completed
 
-      if (index != -1) {
-        currentIndex.value = index
-        setCurrentExercise()
-        handleBody()
-      } else {
-        resetPlayer()
-      }
-    } else {
-      updateCompletedSets(exerciseId, completedSets)
-      setCurrentExercise()
-    }
-  }
+//       if (index != -1) {
+//         currentIndex.value = index
+//         setCurrentExercise()
+//         handleBody()
+//       } else {
+//         resetPlayer()
+//       }
+//     } else {
+//       updateCompletedSets(exerciseId, completedSets)
+//       setCurrentExercise()
+//     }
+//   }
 
-  try {
-    handleBody()
-  } catch (e) {
-    console.log(e)
-  }
-})
+//   try {
+//     handleBody()
+//   } catch (e) {
+//     console.log(e)
+//   }
+// })
 </script>
 
 <template>
