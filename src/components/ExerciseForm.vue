@@ -42,33 +42,14 @@
             <v-expansion-panel title="Общие настройки">
               <v-expansion-panel-text>
                 <v-select
-                  v-model="formValues.firstPhase"
-                  :items="firstPhaseOptions"
-                  item-title="label"
-                  item-value="value"
-                  label="Начальная фаза"
-                  hint="Какая фаза будет выполняться первой"
-                  :rules="[rules.required]"
-                >
-                </v-select>
-                <v-select
-                  v-model="formValues.concentricSpeed"
+                  v-model="formValues.repetitionDuration"
                   :items="speedOptions"
                   item-title="label"
                   item-value="value"
-                  label="Скорость сгибания"
-                  hint="Скорость выполнения упражнения в фазе сокращения мышц"
+                  label="Тайминг повторения"
+                  hint="Скорость выполнения упражнения"
                   :rules="[rules.required]"
                 ></v-select>
-                <v-select
-                  v-model="formValues.eccentricSpeed"
-                  :items="speedOptions"
-                  :item-title="'label'"
-                  label="Скорость расгибания"
-                  hint="Скорость выполнения упражнения в фазе растяжения мышц"
-                  :rules="[rules.required]"
-                >
-                </v-select>
                 <v-select
                   v-model="formValues.countdownBeforeStart"
                   :items="[
@@ -82,21 +63,6 @@
                   :rules="[rules.required]"
                 >
                 </v-select>
-                <v-radio-group
-                  v-model="audioCues"
-                  label="Звуковые подсказки"
-                  hide-details
-                  hide-spin-buttons
-                  class="pa-0"
-                >
-                  <v-radio
-                    v-for="item in audioCueOptions"
-                    :key="item.value"
-                    :value="item"
-                    :label="item.label"
-                  >
-                  </v-radio>
-                </v-radio-group>
                 <v-checkbox
                   class="mr-2"
                   v-model="formValues.audioStart"
@@ -107,10 +73,6 @@
                   v-model="formValues.audioEnd"
                   label="Озвучка конца"
                   hide-details
-                ></v-checkbox>
-                <v-checkbox
-                  v-model="formValues.audioEveryFifthRepetition"
-                  label="Озвучить каждое пятое повторение"
                 ></v-checkbox>
 
                 <v-text-field
@@ -147,11 +109,6 @@
                   <v-checkbox
                     v-model="formValues.announcePauseDuration"
                     label="Озвучить длительность паузы"
-                    hide-details
-                  ></v-checkbox>
-                  <v-checkbox
-                    v-model="formValues.announceNextExercise"
-                    label="Озвучить следующее упражнение"
                     hide-details
                   ></v-checkbox>
                   <v-checkbox
@@ -198,10 +155,7 @@ interface FormValues {
   id: number
   exerciseName: string
   repetitions: number
-  concentricSpeed: number
-  eccentricSpeed: number
-  firstPhase: string
-  audioCues: string
+  repetitionDuration: number
   sets: number
   completedSets: number
   pause: number
@@ -210,9 +164,7 @@ interface FormValues {
   backgroundMelodyLink: string
   audioStart: boolean
   audioEnd: boolean
-  audioEveryFifthRepetition: boolean
   announcePauseDuration: boolean
-  announceNextExercise: boolean
   announceCountdown: boolean
   announcePauseEnd: boolean
   selectedForPlayer: boolean
@@ -235,10 +187,7 @@ const props = defineProps({
 const form = ref<any>(null)
 
 const totalExerciseTime = computed(() => {
-  return (
-    (formValues.value.concentricSpeed + formValues.value.eccentricSpeed) *
-    formValues.value.repetitions
-  )
+  return formValues.value.repetitionDuration * formValues.value.repetitions
 })
 
 const formattedTotalExerciseTime = computed(() => {
@@ -256,10 +205,13 @@ const rules = ref({
     value <= 10 || 'Максимальное количество подходов 10'
 })
 const speedOptions = [
-  { value: 1000, label: 'Быстро (1 сек)' },
-  { value: 1500, label: 'Нормально (1.5 сек)' },
-  { value: 2000, label: 'Плавно (2 сек)' },
-  { value: 2500, label: 'Медленно (2.5 сек)' }
+  { value: 1000, label: '1 сек.' },
+  { value: 2000, label: '2 сек.' },
+  { value: 3000, label: '3 сек.' },
+  { value: 4000, label: '4 сек.' },
+  { value: 5000, label: '5 сек.' },
+  { value: 6000, label: '6 сек.' },
+  { value: 7000, label: '7 сек' }
 ]
 const backgroundMelodyOptions = [
   {
@@ -276,18 +228,7 @@ const exerciseNameRules = ref({
     value.length >= 3 || 'Минимальная длина 3 символа'
 })
 
-const firstPhaseOptions = [
-  { value: 'concentric', label: 'Сгибание' },
-  { value: 'eccentric', label: 'Разгибание' }
-]
 const isValid = ref<boolean>(false)
-const audioCueOptions = reactive([
-  { value: 'movement', label: 'Сгибание/расгибание' },
-  { value: 'breath', label: 'Вдох/выдох' },
-  { value: 'both', label: 'Движение/дыхание' }
-])
-
-const audioCues = ref<Item>(audioCueOptions[1])
 
 const setsOptions = Array.from({ length: 10 }, (_, i) => i + 1)
 
@@ -324,14 +265,9 @@ const defaultFormValues = {
   audioStart: true,
   announcePauseEnd: true,
   announceCountdown: true,
-  announceNextExercise: false,
   announcePauseDuration: true,
-  audioEveryFifthRepetition: true,
   selectedForPlayer: true,
-  audioCues: audioCueOptions[1]?.value,
-  eccentricSpeed: speedOptions[1]?.value,
-  firstPhase: firstPhaseOptions[0]?.value,
-  concentricSpeed: speedOptions[1]?.value,
+  repetitionDuration: speedOptions[2]?.value,
   pause: pauseDurationOptions.value[3]?.value,
   backgroundMelodyLink: backgroundMelodyOptions[0]?.link || ''
 }
@@ -393,9 +329,5 @@ watch(
   },
   { deep: true, immediate: true }
 )
-
-watch(audioCues, (movment: Item) => {
-  formValues.value.audioCues = movment.value
-})
 </script>
 <style scoped></style>
