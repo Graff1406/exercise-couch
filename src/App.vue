@@ -484,7 +484,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
 
 <template>
   <v-app>
-    <v-main>
+    <v-main class="bg-indigo-lighten-5">
       <v-container fluid class="pa-0">
         <v-btn color="indigo" @click="toggleForm" class="my-6" size="large">
           {{ showForm ? 'Скрыть форму' : 'Добавить упражнение' }}

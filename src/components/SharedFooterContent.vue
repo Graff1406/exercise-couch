@@ -74,7 +74,7 @@ const resetPlayer = () => emit('resetPlayer')
 
 <template>
   <div class="pb-1 w-100">
-    <div v-show="isPlayerStarted || isPlayerPaused" class="pb-2">
+    <div v-show="isPlayerStarted || isPlayerPaused" class="pb-1">
       <div class="d-flex justify-space-between align-center">
         <p class="text-h5 mb-2 d-flex justify-space-between align-center gap-2">
           <span>{{
@@ -91,10 +91,9 @@ const resetPlayer = () => emit('resetPlayer')
     </div>
     <div v-if="playerState === 'idle' || playerState === 'reset'">
       <v-btn
-        icon
-        large
+        size="x-large"
         color="indigo"
-        variant="plain"
+        variant="tonal"
         density="comfortable"
         class="mx-2"
         @click="startPlayer"
@@ -104,20 +103,20 @@ const resetPlayer = () => emit('resetPlayer')
       </v-btn>
     </div>
     <div v-if="isPlayerStarted">
-      <v-btn
-        icon
-        large
-        variant="plain"
+      <!-- <v-btn
+        color="warning"
+        size="x-large"
+        variant="tonal"
         density="comfortable"
         class="mx-2"
         @click="pausePlayer"
       >
         <v-icon>mdi-pause</v-icon>
-      </v-btn>
+      </v-btn> -->
       <v-btn
-        icon
-        large
-        variant="plain"
+        color="error"
+        size="x-large"
+        variant="tonal"
         density="comfortable"
         class="mx-2"
         @click="resetPlayer"
@@ -127,9 +126,9 @@ const resetPlayer = () => emit('resetPlayer')
     </div>
     <div v-if="isPlayerPaused">
       <v-btn
-        icon
-        large
-        variant="plain"
+        color="indigo"
+        size="x-large"
+        variant="tonal"
         density="comfortable"
         class="mx-2"
         @click="countinuePlayer"
@@ -137,9 +136,9 @@ const resetPlayer = () => emit('resetPlayer')
         <v-icon>mdi-play</v-icon>
       </v-btn>
       <v-btn
-        icon
-        large
-        variant="plain"
+        color="error"
+        size="x-large"
+        variant="tonal"
         density="comfortable"
         class="mx-2"
         @click="resetPlayer"
