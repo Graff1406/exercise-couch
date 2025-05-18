@@ -497,19 +497,18 @@ watch([isInProgressExercise, isInProgressPause], () => {
           @save="loadExercises"
         />
         <Container
-          fluid
-          v-if="exercises.length > 0"
           orientation="vertical"
           @drop="onDrop"
           drag-handle-selector=".drag-handle"
+          class="px-3"
         >
-          <v-row no-gutters>
-            <Draggable
-              class="w-100"
-              v-for="(exercise, index) in exercises"
-              :key="index"
-            >
-              <v-col cols="12" class="drag-handle pt-0">
+          <Draggable
+            v-for="(exercise, index) in exercises"
+            :key="index"
+            class="w-100 my-3"
+          >
+            <v-row no-gutters class="drag-handle">
+              <v-col cols="12" class="pt-0">
                 <v-card variant="tonal" color="indigo">
                   <v-card-title class="d-flex align-center">
                     <v-checkbox
@@ -534,7 +533,6 @@ watch([isInProgressExercise, isInProgressPause], () => {
                         <v-list-item @click="handleEdit(exercise)"
                           >Редактировать</v-list-item
                         >
-
                         <v-list-item @click="handleDelete(exercise)"
                           >Удалить</v-list-item
                         >
@@ -557,9 +555,9 @@ watch([isInProgressExercise, isInProgressPause], () => {
                             ><span>{{ exercise.sets }}</span>
                           </p>
                           <p class="w-100 d-flex justify-space-between">
-                            <span>Продолжительность подхода:</span
-                            ><span
-                              >{{
+                            <span>Продолжительность подхода:</span>
+                            <span>
+                              {{
                                 formatTime(
                                   exercise.repetitionDuration *
                                     exercise.repetitions
@@ -569,7 +567,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
                           </p>
                           <p class="w-100 d-flex justify-space-between">
                             <span>Пауза:</span
-                            ><span>{{ formatTime(exercise.pause) }} </span>
+                            ><span>{{ formatTime(exercise.pause) }}</span>
                           </p>
                         </v-expansion-panel-text>
                       </v-expansion-panel>
@@ -577,8 +575,8 @@ watch([isInProgressExercise, isInProgressPause], () => {
                   </v-card-text>
                 </v-card>
               </v-col>
-            </Draggable>
-          </v-row>
+            </v-row>
+          </Draggable>
         </Container>
       </v-container>
     </v-main>
