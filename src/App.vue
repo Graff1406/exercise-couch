@@ -510,14 +510,25 @@ watch([isInProgressExercise, isInProgressPause], () => {
             <v-row no-gutters class="drag-handle">
               <v-col cols="12" class="pt-0">
                 <v-card variant="tonal" color="indigo">
-                  <v-card-title class="d-flex align-center">
+                  <v-card-title
+                    class="d-flex align-center"
+                    style="overflow: hidden"
+                  >
                     <v-checkbox
                       v-model="exercise.selectedForPlayer"
                       hide-details
                       density="compact"
+                      class="flex-shrink-0"
                     ></v-checkbox>
-                    <span class="ml-2">{{ exercise.exerciseName }}</span>
-                    <v-spacer></v-spacer>
+
+                    <span
+                      class="ml-2 text-truncate"
+                      style="flex: 1 1 auto; min-width: 0"
+                      :title="exercise.exerciseName"
+                    >
+                      {{ exercise.exerciseName }}
+                    </span>
+
                     <v-menu>
                       <template v-slot:activator="{ props }">
                         <v-btn
@@ -525,6 +536,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
                           density="compact"
                           variant="plain"
                           v-bind="props"
+                          class="flex-shrink-0"
                         >
                           <v-icon>mdi-dots-vertical</v-icon>
                         </v-btn>
@@ -547,10 +559,6 @@ watch([isInProgressExercise, isInProgressPause], () => {
                       <v-expansion-panel title="Детали" bg-color="#edeefa">
                         <v-expansion-panel-text>
                           <p class="w-100 d-flex justify-space-between">
-                            <span>Повторений:</span
-                            ><span>{{ exercise.repetitions }}</span>
-                          </p>
-                          <p class="w-100 d-flex justify-space-between">
                             <span>Подходы:</span
                             ><span>{{ exercise.sets }}</span>
                           </p>
@@ -564,6 +572,10 @@ watch([isInProgressExercise, isInProgressPause], () => {
                                 )
                               }}
                             </span>
+                          </p>
+                          <p class="w-100 d-flex justify-space-between">
+                            <span>Повторений:</span
+                            ><span>{{ exercise.repetitions }}</span>
                           </p>
                           <p class="w-100 d-flex justify-space-between">
                             <span>Пауза:</span
