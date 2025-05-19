@@ -337,13 +337,6 @@ async function runExercise(
         countdownBeforeStartInSeconds--
       }
       await speak('Старт')
-      // await startCountdown(4000, async (time: number) => {
-      //   await speak(time.toString(), { rate: 0.7 })
-      // })
-      // await speak('Три', { rate: 0.7 })
-      // await speak('Два', { rate: 0.7 })
-      // await speak('Один', { rate: 0.7 })
-      // await speak('Старт')
     }
 
     // Start exercise
