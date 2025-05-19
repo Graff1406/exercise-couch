@@ -49,6 +49,7 @@ const exerciseInProgress = ref<Exercise | null>(null)
 
 const countdown = ref(0)
 const currentIndex = ref(0)
+const exerciseRepetitionCount = ref(0)
 const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const utterance = new SpeechSynthesisUtterance()
 
@@ -283,31 +284,12 @@ const isStartButtonDisabled = computed(() => {
   return !exercises.value.some((exercise) => exercise.selectedForPlayer)
 })
 
-const isPlayerStarted = computed(() => {
-  return playerState.value === 'playing'
-})
-
-const isPlayerPaused = computed(() => {
-  return playerState.value === 'paused'
-})
-
 const inProgressPoint = computed(() => {
   const repetitions = exerciseInProgress.value?.repetitions || 0
   const repetitionDuration = exerciseInProgress.value?.repetitionDuration || 0
   const pause = exerciseInProgress.value?.pause || 0
 
   let value = 0
-  console.log(
-    '🚀 ~ inProgressPoint ~ countdown.value:',
-    countdown.value,
-    isInProgressPause.value
-  )
-
-  // if (countdown.value === 0 && isInProgressPause.value) {
-  //   countdown.value = pause
-  // } else if (countdown.value === 0) {
-  //   countdown.value = repetitions * repetitionDuration
-  // }
 
   if (countdown.value > 0) {
     value = countdown.value
@@ -363,6 +345,7 @@ async function runExercise(
     const repetition = startCountRepetition(repetitionDuration, repetitions)
 
     await repetition.counter(async (count: number) => {
+      exerciseRepetitionCount.value = count
       speak(`${count}`, { rate: 0.3 })
     })
 
@@ -396,12 +379,11 @@ async function runExercise(
       await pauseCountRepetition(puseInsecond)
 
       audio.stop()
+      isInProgressPause.value = false
 
       if (announcePauseEnd) {
         await speak('Конец паузы')
       }
-
-      isInProgressPause.value = false
     }
   } catch (e) {
     console.log(e)
@@ -503,7 +485,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
           variant="tonal"
           prepend-icon="mdi-plus"
         >
-          {{ showForm ? 'Скрыть форму' : 'Упражнение' }}
+          Упражнение
         </v-btn>
       </v-app-bar>
       <v-main class="bg-indigo-lighten-5">
@@ -653,6 +635,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
               :totalSelectedExercises="totalSelectedExercises"
               :totalExercisesDuration="totalExercisesDuration"
               :isStartButtonDisabled="isStartButtonDisabled"
+              :exerciseRepetitionCount="exerciseRepetitionCount"
               @startPlayer="startPlayer"
               @pausePlayer="pausePlayer"
               @countinuePlayer="countinuePlayer"
