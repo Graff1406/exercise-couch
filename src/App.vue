@@ -483,164 +483,184 @@ watch([isInProgressExercise, isInProgressPause], () => {
 </script>
 
 <template>
-  <v-app>
-    <v-main class="bg-indigo-lighten-5">
-      <v-container fluid class="pa-0">
-        <v-btn color="indigo" @click="toggleForm" class="my-6" size="large">
-          {{ showForm ? 'Скрыть форму' : 'Добавить упражнение' }}
-        </v-btn>
-        <ExerciseForm
-          v-model="showForm"
-          @close="closeForm"
-          :editMode="editMode"
-          :editExercise="editExercise"
-          @save="loadExercises"
-        />
-        <Container
-          orientation="vertical"
-          @drop="onDrop"
-          drag-handle-selector=".drag-handle"
-          class="px-3"
+  <v-responsive>
+    <v-app>
+      <v-app-bar class="px-2" elevation="0">
+        <v-btn
+          color="indigo"
+          @click="$emit('toggleDrawer')"
+          icon="mdi-weight-lifter"
+          variant="tonal"
+        ></v-btn>
+
+        <v-spacer></v-spacer>
+
+        <v-btn
+          color="indigo"
+          @click="toggleForm"
+          class="my-6"
+          size="large"
+          variant="tonal"
+          prepend-icon="mdi-plus"
         >
-          <Draggable
-            v-for="(exercise, index) in exercises"
-            :key="index"
-            class="w-100 my-3"
+          {{ showForm ? 'Скрыть форму' : 'Упражнение' }}
+        </v-btn>
+      </v-app-bar>
+      <v-main class="bg-indigo-lighten-5">
+        <v-container fluid class="pa-0">
+          <ExerciseForm
+            v-model="showForm"
+            @close="closeForm"
+            :editMode="editMode"
+            :editExercise="editExercise"
+            @save="loadExercises"
+          />
+          <Container
+            orientation="vertical"
+            @drop="onDrop"
+            drag-handle-selector=".drag-handle"
+            class="px-3"
           >
-            <v-row no-gutters class="drag-handle">
-              <v-col cols="12" class="pt-0">
-                <v-card variant="tonal" color="indigo">
-                  <v-card-title
-                    class="d-flex align-center"
-                    style="overflow: hidden"
-                  >
-                    <v-checkbox
-                      v-model="exercise.selectedForPlayer"
-                      hide-details
-                      density="compact"
-                      class="flex-shrink-0"
-                    ></v-checkbox>
-
-                    <span
-                      class="ml-2 text-truncate"
-                      style="flex: 1 1 auto; min-width: 0"
-                      :title="exercise.exerciseName"
+            <Draggable
+              v-for="(exercise, index) in exercises"
+              :key="index"
+              class="w-100 my-3"
+            >
+              <v-row no-gutters class="drag-handle">
+                <v-col cols="12" class="pt-0">
+                  <v-card variant="tonal" color="indigo">
+                    <v-card-title
+                      class="d-flex align-center"
+                      style="overflow: hidden"
                     >
-                      {{ exercise.exerciseName }}
-                    </span>
+                      <v-checkbox
+                        v-model="exercise.selectedForPlayer"
+                        hide-details
+                        density="compact"
+                        class="flex-shrink-0"
+                      ></v-checkbox>
 
-                    <v-menu>
-                      <template v-slot:activator="{ props }">
-                        <v-btn
-                          icon
-                          density="compact"
-                          variant="plain"
-                          v-bind="props"
-                          class="flex-shrink-0"
-                        >
-                          <v-icon>mdi-dots-vertical</v-icon>
-                        </v-btn>
-                      </template>
-                      <v-list>
-                        <v-list-item @click="handleEdit(exercise)"
-                          >Редактировать</v-list-item
-                        >
-                        <v-list-item @click="handleDelete(exercise)"
-                          >Удалить</v-list-item
-                        >
-                      </v-list>
-                    </v-menu>
-                  </v-card-title>
+                      <span
+                        class="ml-2 text-truncate"
+                        style="flex: 1 1 auto; min-width: 0"
+                        :title="exercise.exerciseName"
+                      >
+                        {{ exercise.exerciseName }}
+                      </span>
 
-                  <v-divider></v-divider>
+                      <v-menu>
+                        <template v-slot:activator="{ props }">
+                          <v-btn
+                            icon
+                            density="compact"
+                            variant="plain"
+                            v-bind="props"
+                            class="flex-shrink-0"
+                          >
+                            <v-icon>mdi-dots-vertical</v-icon>
+                          </v-btn>
+                        </template>
+                        <v-list>
+                          <v-list-item @click="handleEdit(exercise)"
+                            >Редактировать</v-list-item
+                          >
+                          <v-list-item @click="handleDelete(exercise)"
+                            >Удалить</v-list-item
+                          >
+                        </v-list>
+                      </v-menu>
+                    </v-card-title>
 
-                  <v-card-text>
-                    <v-expansion-panels elevation="0">
-                      <v-expansion-panel title="Детали" bg-color="#edeefa">
-                        <v-expansion-panel-text>
-                          <p class="w-100 d-flex justify-space-between">
-                            <span>Подходы:</span
-                            ><span>{{ exercise.sets }}</span>
-                          </p>
-                          <p class="w-100 d-flex justify-space-between">
-                            <span>Продолжительность подхода:</span>
-                            <span>
-                              {{
-                                formatTime(
-                                  exercise.repetitionDuration *
-                                    exercise.repetitions
-                                )
-                              }}
-                            </span>
-                          </p>
-                          <p class="w-100 d-flex justify-space-between">
-                            <span>Повторений:</span
-                            ><span>{{ exercise.repetitions }}</span>
-                          </p>
-                          <p class="w-100 d-flex justify-space-between">
-                            <span>Пауза:</span
-                            ><span>{{ formatTime(exercise.pause) }}</span>
-                          </p>
-                        </v-expansion-panel-text>
-                      </v-expansion-panel>
-                    </v-expansion-panels>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-          </Draggable>
-        </Container>
-      </v-container>
-    </v-main>
-    <audio ref="backgroundAudio" loop></audio>
+                    <v-divider></v-divider>
 
-    <v-footer
-      v-if="!isInProgressExercise"
-      app
-      fixed
-      class="d-flex flex-column"
-      elevation="3"
-      style="border-radius: 16px 16px 0 0"
-    >
-      <SharedFooterContent
-        :playerState="playerState"
-        :isInProgressPause="isInProgressPause"
-        :exerciseInProgress="exerciseInProgress"
-        :inProgressPoint="inProgressPoint"
-        :totalSelectedExercises="totalSelectedExercises"
-        :totalExercisesDuration="totalExercisesDuration"
-        :isStartButtonDisabled="isStartButtonDisabled"
-        @startPlayer="startPlayer"
-        @pausePlayer="pausePlayer"
-        @countinuePlayer="countinuePlayer"
-        @resetPlayer="resetPlayer"
-      />
-    </v-footer>
-    <v-bottom-sheet
-      v-model="isTrainingStarted"
-      @update:model-value="resetPlayer"
-    >
-      <v-card
-        class="text-center"
-        height="200"
+                    <v-card-text>
+                      <v-expansion-panels elevation="0">
+                        <v-expansion-panel title="Детали" bg-color="#edeefa">
+                          <v-expansion-panel-text>
+                            <p class="w-100 d-flex justify-space-between">
+                              <span>Подходы:</span
+                              ><span>{{ exercise.sets }}</span>
+                            </p>
+                            <p class="w-100 d-flex justify-space-between">
+                              <span>Продолжительность подхода:</span>
+                              <span>
+                                {{
+                                  formatTime(
+                                    exercise.repetitionDuration *
+                                      exercise.repetitions
+                                  )
+                                }}
+                              </span>
+                            </p>
+                            <p class="w-100 d-flex justify-space-between">
+                              <span>Повторений:</span
+                              ><span>{{ exercise.repetitions }}</span>
+                            </p>
+                            <p class="w-100 d-flex justify-space-between">
+                              <span>Пауза:</span
+                              ><span>{{ formatTime(exercise.pause) }}</span>
+                            </p>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </Draggable>
+          </Container>
+        </v-container>
+      </v-main>
+      <audio ref="backgroundAudio" loop></audio>
+
+      <v-footer
+        v-if="!isInProgressExercise"
+        app
+        fixed
+        class="d-flex flex-column"
+        elevation="4"
         style="border-radius: 16px 16px 0 0"
       >
-        <v-card-text>
-          <SharedFooterContent
-            :playerState="playerState"
-            :isInProgressPause="isInProgressPause"
-            :exerciseInProgress="exerciseInProgress"
-            :inProgressPoint="inProgressPoint"
-            :totalSelectedExercises="totalSelectedExercises"
-            :totalExercisesDuration="totalExercisesDuration"
-            :isStartButtonDisabled="isStartButtonDisabled"
-            @startPlayer="startPlayer"
-            @pausePlayer="pausePlayer"
-            @countinuePlayer="countinuePlayer"
-            @resetPlayer="resetPlayer"
-          />
-        </v-card-text>
-      </v-card>
-    </v-bottom-sheet>
-  </v-app>
+        <SharedFooterContent
+          :playerState="playerState"
+          :isInProgressPause="isInProgressPause"
+          :exerciseInProgress="exerciseInProgress"
+          :inProgressPoint="inProgressPoint"
+          :totalSelectedExercises="totalSelectedExercises"
+          :totalExercisesDuration="totalExercisesDuration"
+          :isStartButtonDisabled="isStartButtonDisabled"
+          @startPlayer="startPlayer"
+          @pausePlayer="pausePlayer"
+          @countinuePlayer="countinuePlayer"
+          @resetPlayer="resetPlayer"
+        />
+      </v-footer>
+      <v-bottom-sheet
+        v-model="isTrainingStarted"
+        @update:model-value="resetPlayer"
+      >
+        <v-card
+          class="text-center"
+          height="200"
+          style="border-radius: 16px 16px 0 0"
+        >
+          <v-card-text>
+            <SharedFooterContent
+              :playerState="playerState"
+              :isInProgressPause="isInProgressPause"
+              :exerciseInProgress="exerciseInProgress"
+              :inProgressPoint="inProgressPoint"
+              :totalSelectedExercises="totalSelectedExercises"
+              :totalExercisesDuration="totalExercisesDuration"
+              :isStartButtonDisabled="isStartButtonDisabled"
+              @startPlayer="startPlayer"
+              @pausePlayer="pausePlayer"
+              @countinuePlayer="countinuePlayer"
+              @resetPlayer="resetPlayer"
+            />
+          </v-card-text>
+        </v-card>
+      </v-bottom-sheet>
+    </v-app>
+  </v-responsive>
 </template>
