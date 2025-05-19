@@ -306,7 +306,8 @@ const inProgressPoint = computed(() => {
 async function runExercise(
   exercise: Exercise,
   isPause: boolean,
-  isLastExerciseInCurrentSet: boolean
+  isLastExerciseInCurrentSet: boolean,
+  nextExercise: Exercise
 ) {
   if (!exercise || !isTrainingStarted.value) return
 
@@ -381,6 +382,12 @@ async function runExercise(
 
       audio.play('melodies/timer-tiking.mp3', { volume: 1 })
 
+      if (pause > 5000) {
+        setTimeout(() => {
+          speak('Следующее упражнение ' + nextExercise.exerciseName)
+        }, Math.round(nextExercise.pause / 2))
+      }
+
       await pauseCountRepetition(puseInsecond)
 
       audio.stop()
@@ -406,14 +413,23 @@ async function runExercises() {
 
     for (let i = 0; i < currentExercises.length; i++) {
       if (!isTrainingStarted.value) break
-      exerciseInProgress.value = currentExercises[i]
-      if (
-        exerciseInProgress.value.completedSets >= exerciseInProgress.value.sets
-      )
-        continue
+
+      const currentExercise = currentExercises[i]
+      exerciseInProgress.value = currentExercise
+
+      if (currentExercise.completedSets >= currentExercise.sets) continue
 
       const isLastExerciseInSet = i === currentExercises.length - 1
       const isLastSet = setIndex === totalSets - 1
+
+      // Определим следующее упражнение:
+      let nextExercise: typeof currentExercise | null = null
+      if (!isLastExerciseInSet) {
+        nextExercise = currentExercises[i + 1]
+      } else if (!isLastSet) {
+        // Следующее упражнение в новом сете — первый
+        nextExercise = currentExercises[0]
+      }
 
       // Логика паузы и конца сета:
       let isPauseNeeded = true
@@ -421,22 +437,24 @@ async function runExercises() {
 
       if (isLastExerciseInSet) {
         if (isLastSet) {
-          // последний сет → НЕ нужна пауза, но сказать о завершении сета
           isPauseNeeded = false
           announceSetEnd = true
         } else {
-          // не последний сет → нужна пауза после конца сета
           isPauseNeeded = true
           announceSetEnd = true
         }
       }
 
-      // Выполнить упражнение
-      await runExercise(exerciseInProgress.value, isPauseNeeded, announceSetEnd)
+      await runExercise(
+        currentExercise,
+        isPauseNeeded,
+        announceSetEnd,
+        nextExercise
+      )
 
       // Обновляем completedSets
       const index = exercises.value.findIndex(
-        (ex) => ex.id === exerciseInProgress.value?.id
+        (ex) => ex.id === currentExercise.id
       )
       if (index !== -1) {
         exercises.value[index] = {
