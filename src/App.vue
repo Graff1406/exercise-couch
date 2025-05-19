@@ -126,7 +126,8 @@ const closeForm = () => {
 
 const startCountdown = (
   time: number,
-  callbackProcessing?: (countdown: number) => void
+  callbackProcessing?: (countdown: number) => void,
+  interval: number = 1000
 ) => {
   let countdown = time / 1000
 
@@ -142,7 +143,7 @@ const startCountdown = (
         countdownInterval.value = null
         resolve(true)
       }
-    }, 1000)
+    }, interval)
   })
 }
 
@@ -328,10 +329,21 @@ async function runExercise(
     }
 
     if (countdownBeforeStart) {
-      await speak('Три', { rate: 0.7 })
-      await speak('Два', { rate: 0.7 })
-      await speak('Один', { rate: 0.7 })
+      let countdownBeforeStartInSeconds = 3
+
+      while (countdownBeforeStartInSeconds > 0) {
+        await speak(countdownBeforeStartInSeconds.toString())
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        countdownBeforeStartInSeconds--
+      }
       await speak('Старт')
+      // await startCountdown(4000, async (time: number) => {
+      //   await speak(time.toString(), { rate: 0.7 })
+      // })
+      // await speak('Три', { rate: 0.7 })
+      // await speak('Два', { rate: 0.7 })
+      // await speak('Один', { rate: 0.7 })
+      // await speak('Старт')
     }
 
     // Start exercise
