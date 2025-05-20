@@ -67,6 +67,22 @@ const speak = (text: string, { rate = 1 } = { rate: 1 }): Promise<void> => {
   })
 }
 
+const calculateSpeechRate = (exerciseSpeed: number): number => {
+  // Нормализуем к диапазону 500-3000 мс (0.5-3 сек)
+  const minSpeed = 500
+  const maxSpeed = 3000
+
+  // Ограничиваем входное значение
+  const speed = Math.max(minSpeed, Math.min(maxSpeed, exerciseSpeed))
+
+  // Формула обратной зависимости (чем быстрее упражнение, тем быстрее речь)
+  const normalized = (speed - minSpeed) / (maxSpeed - minSpeed) // 0-1
+  const rate = 2.5 - normalized * 2 // 2.5 → 0.5
+
+  // Округляем до десятых и возвращаем
+  return Math.round(rate * 10) / 10
+}
+
 const startCountRepetition = (interval: number = 1000, repetitions: number) => {
   let count = 0
   let countRepetitionInterval: ReturnType<typeof setInterval> | null = null
@@ -325,20 +341,20 @@ async function runExercise(
 
   try {
     isInProgressExercise.value = true
-    if (audioStart) {
-      await speak('Упражнение ' + exerciseName + ' начинается ')
-    }
+    // if (audioStart) {
+    //   await speak('Упражнение ' + exerciseName + ' начинается ')
+    // }
 
-    if (countdownBeforeStart) {
-      let countdownBeforeStartInSeconds = 3
+    // if (countdownBeforeStart) {
+    //   let countdownBeforeStartInSeconds = 3
 
-      while (countdownBeforeStartInSeconds > 0) {
-        await speak(countdownBeforeStartInSeconds.toString())
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        countdownBeforeStartInSeconds--
-      }
-      await speak('Старт')
-    }
+    //   while (countdownBeforeStartInSeconds > 0) {
+    //     await speak(countdownBeforeStartInSeconds.toString())
+    //     await new Promise((resolve) => setTimeout(resolve, 1000))
+    //     countdownBeforeStartInSeconds--
+    //   }
+    //   await speak('Старт')
+    // }
 
     // Start exercise
 
@@ -352,7 +368,8 @@ async function runExercise(
 
     await repetition.counter(async (count: number) => {
       exerciseRepetitionCount.value = count
-      speak(`${count}`, { rate: 0.3 })
+
+      speak(`${count}`, { rate: calculateSpeechRate(repetitionDuration) })
     })
 
     audio.stop()
