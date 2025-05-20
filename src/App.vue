@@ -556,10 +556,12 @@ watch([isInProgressExercise, isInProgressPause], () => {
           <draggable
             v-model="exercises"
             item-key="id"
-            @end="onDrop"
             :animation="200"
+            :delay="200"
+            :delay-on-touch-only="true"
             ghost-class="ghost"
             chosen-class="chosen"
+            @end="onDrop"
           >
             <template #item="{ element }">
               <v-row
