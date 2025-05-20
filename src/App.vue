@@ -46,11 +46,13 @@ const editExercise = ref<Partial<Exercise>>({})
 const groupExercises = ref<number[]>([])
 const editMode = ref(false)
 const exerciseInProgress = ref<Exercise | null>(null)
+const nextExerciseInCurrentSet = ref<Exercise | null>(null)
 
 const countdown = ref(0)
 const currentIndex = ref(0)
 const exerciseRepetitionCount = ref(0)
 const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
+
 const utterance = new SpeechSynthesisUtterance()
 
 const loadExercises = () => {
@@ -368,8 +370,17 @@ async function runExercise(
 
     await repetition.counter(async (count: number) => {
       exerciseRepetitionCount.value = count
+      const rate = calculateSpeechRate(repetitionDuration)
 
-      speak(`${count}`, { rate: calculateSpeechRate(repetitionDuration) })
+      if (repetitions > 8 && repetitions - 1 === count) {
+        speak('Еще раз', {
+          rate
+        })
+      } else if (repetitions > 8 && Math.ceil(repetitions / 2) === count) {
+        speak('Половина', { rate })
+      } else {
+        speak(`${count}`, { rate })
+      }
     })
 
     audio.stop()
@@ -433,6 +444,10 @@ async function runExercises() {
 
       const currentExercise = currentExercises[i]
       exerciseInProgress.value = currentExercise
+
+      nextExerciseInCurrentSet.value = currentExercises[i + 1]
+        ? currentExercises[i + 1]
+        : null
 
       if (currentExercise.completedSets >= currentExercise.sets) continue
 
@@ -676,6 +691,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
               :totalExercisesDuration="totalExercisesDuration"
               :isStartButtonDisabled="isStartButtonDisabled"
               :exerciseRepetitionCount="exerciseRepetitionCount"
+              :nextExerciseInCurrentSet="nextExerciseInCurrentSet"
               @startPlayer="startPlayer"
               @pausePlayer="pausePlayer"
               @countinuePlayer="countinuePlayer"

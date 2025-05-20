@@ -35,6 +35,10 @@ const props = defineProps({
     type: Object as () => Exercise | null,
     default: null
   },
+  nextExerciseInCurrentSet: {
+    type: Object as () => Exercise | null,
+    default: null
+  },
   inProgressPoint: {
     type: String,
     default: '0:00'
@@ -62,7 +66,8 @@ const emit = defineEmits([
   'startPlayer',
   'pausePlayer',
   'countinuePlayer',
-  'resetPlayer'
+  'resetPlayer',
+  'nextExercise'
 ])
 
 // Methods
@@ -70,6 +75,8 @@ const startPlayer = () => emit('startPlayer')
 const pausePlayer = () => emit('pausePlayer')
 const countinuePlayer = () => emit('countinuePlayer')
 const resetPlayer = () => emit('resetPlayer')
+const nextExercise = () => emit('nextExercise')
+
 function timeStringToMilliseconds(timeStr: string): number {
   const [min, sec] = timeStr.split(':').map(Number)
   return ((min || 0) * 60 + (sec || 0)) * 1000
@@ -103,41 +110,49 @@ const percentRemaining = computed(() => {
   <div class="pb-1 w-100">
     <div v-show="isPlayerStarted || isPlayerPaused" class="pb-1">
       <div class="d-flex align-center justify-space-between mb-2">
-        <p
-          class="text-h5 text-truncate"
-          style="max-width: 100%; min-width: 0"
-          :title="exerciseInProgress?.exerciseName"
-        >
-          {{
-            isInProgressPause && exerciseInProgress
-              ? 'Пауза'
-              : exerciseInProgress?.exerciseName
-          }}
-          <strong
-            ><p>
-              <span>{{ exerciseRepetitionCount }}</span>
-              <span>/</span>
-              <span>{{ exerciseInProgress?.repetitions }}</span>
-            </p></strong
-          >
-        </p>
+        <div>
+          <p :title="exerciseInProgress?.exerciseName">
+            {{
+              isInProgressPause && exerciseInProgress
+                ? 'Пауза'
+                : exerciseInProgress?.exerciseName
+            }}
+            <strong
+              ><p>
+                <span>{{ exerciseRepetitionCount }}</span>
+                <span>/</span>
+                <span>{{ exerciseInProgress?.repetitions }}</span>
+              </p></strong
+            >
+          </p>
 
-        <v-progress-circular
-          :model-value="percentRemaining"
-          :rotate="360"
-          :size="80"
-          :width="10"
-          :color="isInProgressPause ? 'warning' : 'indigo'"
-          class="ml-4 flex-shrink-0"
-        >
-          {{ inProgressPoint }}
-        </v-progress-circular>
+          <div v-if="nextExerciseInCurrentSet?.id">
+            <p class="text-caption">Следующее упражнение</p>
+            <p>
+              {{ nextExerciseInCurrentSet?.exerciseName }}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <v-progress-circular
+            :model-value="percentRemaining"
+            :rotate="360"
+            :size="80"
+            :width="10"
+            :color="isInProgressPause ? 'warning' : 'indigo'"
+            class="ml-4 flex-shrink-0"
+          >
+            {{ inProgressPoint }}
+          </v-progress-circular>
+        </div>
       </div>
 
       <v-divider></v-divider>
     </div>
     <div v-if="playerState === 'idle' || playerState === 'reset'">
       <v-btn
+        icon
         size="x-large"
         color="indigo"
         variant="tonal"
@@ -149,30 +164,41 @@ const percentRemaining = computed(() => {
         <v-icon>mdi-play</v-icon>
       </v-btn>
     </div>
-    <div v-if="isPlayerStarted">
+    <div class="d-flex gap-4 justify-center" v-if="isPlayerStarted">
       <!-- <v-btn
+        icon
         color="warning"
         size="x-large"
         variant="tonal"
         density="comfortable"
-        class="mx-2"
         @click="pausePlayer"
       >
         <v-icon>mdi-pause</v-icon>
       </v-btn> -->
       <v-btn
+        icon
         color="error"
         size="x-large"
         variant="tonal"
         density="comfortable"
-        class="mx-2"
         @click="resetPlayer"
       >
         <v-icon>mdi-stop</v-icon>
       </v-btn>
+      <!-- <v-btn
+        @click="nextExercise"
+        icon
+        color="indigo"
+        size="x-large"
+        variant="tonal"
+        density="comfortable"
+      >
+        <v-icon>mdi-skip-next</v-icon>
+      </v-btn> -->
     </div>
-    <div v-if="isPlayerPaused">
+    <!-- <div v-if="isPlayerPaused">
       <v-btn
+        icon
         color="indigo"
         size="x-large"
         variant="tonal"
@@ -183,6 +209,7 @@ const percentRemaining = computed(() => {
         <v-icon>mdi-play</v-icon>
       </v-btn>
       <v-btn
+        icon
         color="error"
         size="x-large"
         variant="tonal"
@@ -192,7 +219,7 @@ const percentRemaining = computed(() => {
       >
         <v-icon>mdi-stop</v-icon>
       </v-btn>
-    </div>
+    </div> -->
   </div>
   <div class="w-100"><v-divider></v-divider></div>
   <div class="pt-2 text-caption w-100 d-flex justify-space-between">
