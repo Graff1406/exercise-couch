@@ -206,12 +206,22 @@ const rules = ref({
 })
 const speedOptions = [
   { value: 1000, label: '1 сек.' },
+  { value: 1200, label: '1.2 сек.' },
+  { value: 1400, label: '1.4 сек.' },
+  { value: 1600, label: '1.6 сек.' },
+  { value: 1800, label: '1.8 сек.' },
   { value: 2000, label: '2 сек.' },
+  { value: 2200, label: '2.2 сек.' },
+  { value: 2400, label: '2.4 сек.' },
+  { value: 2600, label: '2.6 сек.' },
+  { value: 2800, label: '2.8 сек.' },
   { value: 3000, label: '3 сек.' },
+  { value: 3500, label: '3.5 сек.' },
   { value: 4000, label: '4 сек.' },
+  { value: 4500, label: '4.5 сек.' },
   { value: 5000, label: '5 сек.' },
-  { value: 6000, label: '6 сек.' },
-  { value: 7000, label: '7 сек' }
+
+  { value: 6000, label: '6 сек.' }
 ]
 const backgroundMelodyOptions = [
   {
