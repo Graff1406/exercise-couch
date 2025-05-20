@@ -12,7 +12,8 @@ import {
   VList,
   VListItem
 } from 'vuetify/components'
-import { Container, Draggable } from 'vue3-smooth-dnd'
+import draggable from 'vuedraggable'
+
 type PlayerState = 'idle' | 'playing' | 'paused' | 'reset'
 interface Exercise {
   id: number
@@ -552,18 +553,19 @@ watch([isInProgressExercise, isInProgressPause], () => {
             :editExercise="editExercise"
             @save="loadExercises"
           />
-          <Container
-            orientation="vertical"
-            @drop="onDrop"
-            drag-handle-selector=".drag-handle"
-            class="px-3"
+          <draggable
+            v-model="exercises"
+            item-key="id"
+            @end="onDrop"
+            :animation="200"
+            ghost-class="ghost"
+            chosen-class="chosen"
           >
-            <Draggable
-              v-for="(exercise, index) in exercises"
-              :key="index"
-              class="w-100 my-3"
-            >
-              <v-row no-gutters class="drag-handle">
+            <template #item="{ element }">
+              <v-row
+                no-gutters
+                class="drag-handle d-flex flex-column mb-3 px-3"
+              >
                 <v-col cols="12" class="pt-0">
                   <v-card variant="tonal" color="indigo">
                     <v-card-title
@@ -571,7 +573,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
                       style="overflow: hidden"
                     >
                       <v-checkbox
-                        v-model="exercise.selectedForPlayer"
+                        v-model="element.selectedForPlayer"
                         hide-details
                         density="compact"
                         class="flex-shrink-0"
@@ -580,9 +582,9 @@ watch([isInProgressExercise, isInProgressPause], () => {
                       <span
                         class="ml-2 text-truncate"
                         style="flex: 1 1 auto; min-width: 0"
-                        :title="exercise.exerciseName"
+                        :title="element.exerciseName"
                       >
-                        {{ exercise.exerciseName }}
+                        {{ element.exerciseName }}
                       </span>
 
                       <v-menu>
@@ -598,10 +600,10 @@ watch([isInProgressExercise, isInProgressPause], () => {
                           </v-btn>
                         </template>
                         <v-list>
-                          <v-list-item @click="handleEdit(exercise)"
+                          <v-list-item @click="handleEdit(element)"
                             >Редактировать</v-list-item
                           >
-                          <v-list-item @click="handleDelete(exercise)"
+                          <v-list-item @click="handleDelete(element)"
                             >Удалить</v-list-item
                           >
                         </v-list>
@@ -616,26 +618,26 @@ watch([isInProgressExercise, isInProgressPause], () => {
                           <v-expansion-panel-text>
                             <p class="w-100 d-flex justify-space-between">
                               <span>Подходы:</span
-                              ><span>{{ exercise.sets }}</span>
+                              ><span>{{ element.sets }}</span>
                             </p>
                             <p class="w-100 d-flex justify-space-between">
                               <span>Продолжительность подхода:</span>
                               <span>
                                 {{
                                   formatTime(
-                                    exercise.repetitionDuration *
-                                      exercise.repetitions
+                                    element.repetitionDuration *
+                                      element.repetitions
                                   )
                                 }}
                               </span>
                             </p>
                             <p class="w-100 d-flex justify-space-between">
                               <span>Повторений:</span
-                              ><span>{{ exercise.repetitions }}</span>
+                              ><span>{{ element.repetitions }}</span>
                             </p>
                             <p class="w-100 d-flex justify-space-between">
                               <span>Пауза:</span
-                              ><span>{{ formatTime(exercise.pause) }}</span>
+                              ><span>{{ formatTime(element.pause) }}</span>
                             </p>
                           </v-expansion-panel-text>
                         </v-expansion-panel>
@@ -644,8 +646,8 @@ watch([isInProgressExercise, isInProgressPause], () => {
                   </v-card>
                 </v-col>
               </v-row>
-            </Draggable>
-          </Container>
+            </template>
+          </draggable>
         </v-container>
       </v-main>
       <audio ref="backgroundAudio" loop></audio>
@@ -703,3 +705,22 @@ watch([isInProgressExercise, isInProgressPause], () => {
     </v-app>
   </v-responsive>
 </template>
+
+<style>
+.item {
+  padding: 10px;
+  margin-bottom: 5px;
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  cursor: move;
+  transition: transform 0.2s ease;
+}
+
+.ghost {
+  opacity: 0.4;
+}
+
+.chosen {
+  background-color: #c5cae9;
+}
+</style>
