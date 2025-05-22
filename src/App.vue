@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import ExerciseForm from './components/ExerciseForm.vue'
-import SharedFooterContent from './components/SharedFooterContent.vue'
 import { ref, onMounted, computed, watch } from 'vue'
 import {
   VCard,
@@ -14,25 +12,10 @@ import {
 } from 'vuetify/components'
 import draggable from 'vuedraggable'
 
-type PlayerState = 'idle' | 'playing' | 'paused' | 'reset'
-interface Exercise {
-  id: number
-  exerciseName: string
-  repetitions: number
-  repetitionDuration: number
-  sets: number
-  completedSets: number
-  pause: number
-  countdownBeforeStart: number
-  gifUrl: string
-  backgroundMelodyLink: string
-  audioStart: boolean
-  audioEnd: boolean
-  announcePauseDuration: boolean
-  announceCountdown: boolean
-  announcePauseEnd: boolean
-  selectedForPlayer: boolean
-}
+import ExerciseForm from './components/ExerciseForm.vue'
+import SharedFooterContent from './components/SharedFooterContent.vue'
+
+import { type Exercise, type PlayerState } from './models'
 
 const backgroundAudio = ref<HTMLAudioElement | null>(null)
 
@@ -43,14 +26,14 @@ const isInProgressExercise = ref(false)
 const isTrainingStarted = ref(false)
 
 const playerState = ref<PlayerState>('idle')
-const editExercise = ref<Partial<Exercise>>({})
 const groupExercises = ref<number[]>([])
 const editMode = ref(false)
-const exerciseInProgress = ref<Exercise | null>(null)
-const nextExerciseInCurrentSet = ref<Exercise | null>(null)
-
+const exerciseInProgress = ref<Exercise>({})
+const nextExerciseInCurrentSet = ref<Exercise>({})
+const editExercise = ref<Exercise>({})
 const countdown = ref(0)
 const currentIndex = ref(0)
+// const currentSetIndex = ref(0)
 const exerciseRepetitionCount = ref(0)
 const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 
@@ -275,7 +258,9 @@ const formatTime = (totalTime: number): string => {
 
 // Computed properties for footer info
 const selectedExercises = computed(() => {
-  return exercises.value.filter((exercise) => exercise.selectedForPlayer)
+  return exercises.value.filter(
+    (exercise: Exercise) => exercise.selectedForPlayer
+  )
 })
 
 const totalSelectedExercises = computed(() => {
@@ -286,7 +271,10 @@ const totalExercisesDuration = computed(() => {
   let totalTime = 0
   selectedExercises.value.forEach((ex: Exercise) => {
     const sets = ex?.sets || 0
-    const repetitions = ex?.repetitions || 0
+    const repetitions = ex?.repetitionsPerSet?.reduce(
+      (sum: number, current: Exercise) => sum + current,
+      0
+    )
     const repetitionDuration = ex?.repetitionDuration || 0
     const pause = ex?.pause || 0
 
@@ -301,11 +289,13 @@ const totalExercisesDuration = computed(() => {
 })
 
 const isStartButtonDisabled = computed(() => {
-  return !exercises.value.some((exercise) => exercise.selectedForPlayer)
+  return !exercises.value.some(
+    (exercise: Exercise) => exercise.selectedForPlayer
+  )
 })
 
 const inProgressPoint = computed(() => {
-  const repetitions = exerciseInProgress.value?.repetitions || 0
+  const repetitions = exerciseInProgress.value?.repetitions
   const repetitionDuration = exerciseInProgress.value?.repetitionDuration || 0
   const pause = exerciseInProgress.value?.pause || 0
 
@@ -435,7 +425,9 @@ async function runExercises() {
   const currentExercises = selectedExercises.value
   if (!currentExercises.length || !isTrainingStarted.value) return
 
-  const totalSets = Math.max(...currentExercises.map((ex) => ex.sets))
+  const totalSets = Math.max(
+    ...currentExercises.map((exercise: Exercise) => exercise.sets)
+  )
 
   for (let setIndex = 0; setIndex < totalSets; setIndex++) {
     if (!isTrainingStarted.value) break
@@ -444,10 +436,16 @@ async function runExercises() {
       if (!isTrainingStarted.value) break
 
       const currentExercise = currentExercises[i]
-      exerciseInProgress.value = currentExercise
+      exerciseInProgress.value = {
+        ...currentExercise,
+        repetitions: currentExercise.repetitionsPerSet[setIndex] || 0
+      }
 
       nextExerciseInCurrentSet.value = currentExercises[i + 1]
-        ? currentExercises[i + 1]
+        ? {
+            ...currentExercises[i + 1],
+            repetitions: currentExercise.repetitionsPerSet[setIndex] || 0
+          }
         : null
 
       if (currentExercise.completedSets >= currentExercise.sets) continue
@@ -479,15 +477,15 @@ async function runExercises() {
       }
 
       await runExercise(
-        currentExercise,
+        exerciseInProgress.value,
         isPauseNeeded,
         announceSetEnd,
-        nextExercise
+        nextExerciseInCurrentSet.value
       )
 
       // Обновляем completedSets
       const index = exercises.value.findIndex(
-        (ex) => ex.id === currentExercise.id
+        (exercise: Exercise) => exercise.id === currentExercise.id
       )
       if (index !== -1) {
         exercises.value[index] = {
@@ -566,7 +564,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
             <template #item="{ element }">
               <v-row
                 no-gutters
-                class="drag-handle d-flex flex-column mb-3 px-3"
+                class="drag-handle d-flex flex-column pa-3 pb-0"
               >
                 <v-col cols="12" class="pt-0">
                   <v-card variant="tonal" color="indigo">
@@ -618,28 +616,56 @@ watch([isInProgressExercise, isInProgressPause], () => {
                       <v-expansion-panels elevation="0">
                         <v-expansion-panel title="Детали" bg-color="#edeefa">
                           <v-expansion-panel-text>
+                            <div
+                              v-for="(item, index) in element.repetitionsPerSet"
+                              :key="Math.random()"
+                            >
+                              <p
+                                class="w-100 d-flex justify-space-between font-weight-bold"
+                              >
+                                {{ `Сет ${index + 1}:` }}
+                              </p>
+                              <p
+                                class="w-100 d-flex justify-space-between pl-3"
+                              >
+                                <span>Повторений:</span><span>{{ item }}</span>
+                              </p>
+                              <p
+                                class="w-100 d-flex justify-space-between pl-3"
+                              >
+                                <span>Продолжительность:</span>
+                                <span>
+                                  {{
+                                    formatTime(
+                                      item * element.repetitionDuration +
+                                        element.pause
+                                    )
+                                  }}
+                                </span>
+                              </p>
+                            </div>
+
+                            <v-divider class="my-4"></v-divider>
+
                             <p class="w-100 d-flex justify-space-between">
-                              <span>Подходы:</span
-                              ><span>{{ element.sets }}</span>
-                            </p>
-                            <p class="w-100 d-flex justify-space-between">
-                              <span>Продолжительность подхода:</span>
-                              <span>
-                                {{
-                                  formatTime(
-                                    element.repetitionDuration *
-                                      element.repetitions
-                                  )
-                                }}
-                              </span>
-                            </p>
-                            <p class="w-100 d-flex justify-space-between">
-                              <span>Повторений:</span
-                              ><span>{{ element.repetitions }}</span>
-                            </p>
-                            <p class="w-100 d-flex justify-space-between">
-                              <span>Пауза:</span
+                              <span class="font-weight-bold"> Пауза:</span
                               ><span>{{ formatTime(element.pause) }}</span>
+                            </p>
+
+                            <p class="w-100 d-flex justify-space-between">
+                              <span class="font-weight-bold"> Общее время:</span
+                              ><span>{{
+                                formatTime(
+                                  element.pause * element.sets +
+                                    element.repetitionDuration *
+                                      element.repetitionsPerSet.reduce(
+                                        (sum: number, current: Exercise) =>
+                                          sum + current,
+                                        0
+                                      ) *
+                                      element.sets
+                                )
+                              }}</span>
                             </p>
                           </v-expansion-panel-text>
                         </v-expansion-panel>

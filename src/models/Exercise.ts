@@ -1,7 +1,7 @@
 export interface Exercise {
   id: number
   exerciseName: string
-  repetitions: number
+  repetitionsPerSet: number
   repetitionDuration: number
   sets: number
   completedSets: number
@@ -15,4 +15,5 @@ export interface Exercise {
   announceCountdown: boolean
   announcePauseEnd: boolean
   selectedForPlayer: boolean
+  repetitions: number
 }

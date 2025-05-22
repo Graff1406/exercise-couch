@@ -112,11 +112,13 @@ const percentRemaining = computed(() => {
       <div class="d-flex align-center justify-space-between mb-2">
         <div>
           <p :title="exerciseInProgress?.exerciseName">
-            {{
-              isInProgressPause && exerciseInProgress
-                ? 'Пауза'
-                : exerciseInProgress?.exerciseName
-            }}
+            <span class="text-h5 text-uppercase">
+              {{
+                isInProgressPause && exerciseInProgress
+                  ? 'Пауза'
+                  : exerciseInProgress?.exerciseName
+              }}
+            </span>
             <strong
               ><p>
                 <span>{{ exerciseRepetitionCount }}</span>
@@ -126,11 +128,17 @@ const percentRemaining = computed(() => {
             >
           </p>
 
-          <div v-if="nextExerciseInCurrentSet?.id">
-            <p class="text-caption">Следующее упражнение</p>
-            <p>
+          <v-divider class="my-4"></v-divider>
+
+          <div>
+            <p
+              v-if="nextExerciseInCurrentSet?.id"
+              class="text-h5 text-uppercase"
+            >
               {{ nextExerciseInCurrentSet?.exerciseName }}
             </p>
+
+            <p v-else class="text-h5 text-uppercase">Конец Сета</p>
           </div>
         </div>
 

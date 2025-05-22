@@ -29,14 +29,23 @@
             :rules="[rules.required]"
             hint="Количество подходов за упражнение"
           ></v-select>
-          <v-text-field
-            v-model.number="formValues.repetitions"
-            label="Повторения"
-            type="number"
-            min="3"
-            :rules="[rules.min]"
-            hint="Количество повторений за подход, должно быть больше 3"
-          ></v-text-field>
+
+          <div
+            v-for="(_, index) in formValues.sets"
+            :key="`rep-set-${index}`"
+            class="mb-1"
+          >
+            <v-text-field
+              v-model.number="formValues.repetitionsPerSet[index]"
+              :label="`Повторения для подхода ${index + 1}`"
+              type="number"
+              min="3"
+              :rules="[rules.required, rules.min]"
+              :hint="`Количество повторений для подхода ${
+                index + 1
+              }, должно быть больше 3`"
+            ></v-text-field>
+          </div>
 
           <v-expansion-panels>
             <v-expansion-panel title="Общие настройки">
@@ -154,7 +163,7 @@ import { ref, defineEmits, computed, watch, reactive } from 'vue'
 interface FormValues {
   id: number
   exerciseName: string
-  repetitions: number
+  repetitionsPerSet: number[]
   repetitionDuration: number
   sets: number
   completedSets: number
@@ -187,9 +196,14 @@ const props = defineProps({
 const form = ref<any>(null)
 
 const totalExerciseTime = computed(() => {
-  return formValues.value.repetitionDuration * formValues.value.repetitions
+  // Отображаем длительность первого подхода как пример
+  const firstSetRepetitions =
+    formValues.value.repetitionsPerSet &&
+    formValues.value.repetitionsPerSet.length > 0
+      ? formValues.value.repetitionsPerSet[0]
+      : 0
+  return formValues.value.repetitionDuration * (firstSetRepetitions || 0)
 })
-
 const formattedTotalExerciseTime = computed(() => {
   return formatMillisecondsToMinutesSeconds(totalExerciseTime.value || 0)
 })
@@ -263,13 +277,16 @@ const pauseDurationOptions = computed(() => {
   return options
 })
 
+const _defaultSets = 3
+const _defaultRepetitionsValue = 14
+
 const defaultFormValues = {
   id: Math.floor(Math.random() * 1000000),
   gifUrl: '',
   exerciseName: '',
-  sets: 3,
+  sets: _defaultSets,
   completedSets: 0,
-  repetitions: 14,
+  repetitionsPerSet: Array(_defaultSets).fill(_defaultRepetitionsValue),
   countdownBeforeStart: 3000,
   audioEnd: true,
   audioStart: true,
@@ -282,7 +299,11 @@ const defaultFormValues = {
   backgroundMelodyLink: backgroundMelodyOptions[0]?.link || ''
 }
 
-const formValues = ref<FormValues>({ ...defaultFormValues })
+const formValues = ref<FormValues>({
+  ...defaultFormValues,
+  repetitionsPerSet: [...defaultFormValues.repetitionsPerSet] // Ensure a new array instance
+})
+
 const validate = async () => {
   if (isValid.value) {
     save()
@@ -293,8 +314,12 @@ const close = () => {
   emit('close')
   dialog.value = false
   setTimeout(() => {
-    formValues.value = { ...defaultFormValues }
-  }, 1000)
+    formValues.value = {
+      ...defaultFormValues,
+      id: Math.floor(Math.random() * 1000000), // Generate new ID for potential new entry
+      repetitionsPerSet: [...defaultFormValues.repetitionsPerSet] // Ensure fresh array
+    }
+  }, 300) // Reduced timeout
 }
 
 const save = async () => {
@@ -317,10 +342,69 @@ const save = async () => {
 
 watch(
   () => props.editExercise,
-  (newValue: FormValues | {}) => {
-    if (Object.keys(newValue).length > 0) {
+  (exerciseToEdit?: FormValues & { repetitions?: number }) => {
+    // Allow old 'repetitions' property for migration
+    if (
+      props.editMode &&
+      exerciseToEdit &&
+      Object.keys(exerciseToEdit).length > 0
+    ) {
+      // Start with a deep clone of defaults, then overlay with exerciseToEdit data
+      const newFormState = JSON.parse(
+        JSON.stringify(defaultFormValues)
+      ) as FormValues
+
+      // Merge all properties from exerciseToEdit
+      for (const key in exerciseToEdit) {
+        if (Object.prototype.hasOwnProperty.call(exerciseToEdit, key)) {
+          if (key === 'repetitions' && !exerciseToEdit.repetitionsPerSet) {
+            // Skip old 'repetitions' if we're about to migrate it, it's handled below
+            continue
+          }
+          ;(newFormState as any)[key] = (exerciseToEdit as any)[key]
+        }
+      }
+      // Ensure ID from exerciseToEdit is used
+      newFormState.id = exerciseToEdit.id || newFormState.id
+
+      // Handle repetitions migration or setting
+      if (
+        exerciseToEdit.hasOwnProperty('repetitions') &&
+        !exerciseToEdit.repetitionsPerSet
+      ) {
+        const numSets = exerciseToEdit.sets || newFormState.sets
+        const repValue =
+          typeof (exerciseToEdit as any).repetitions === 'number'
+            ? (exerciseToEdit as any).repetitions
+            : defaultFormValues.repetitionsPerSet[0] || 10
+        newFormState.repetitionsPerSet = Array(numSets).fill(repValue)
+      } else if (exerciseToEdit.repetitionsPerSet) {
+        newFormState.repetitionsPerSet = [...exerciseToEdit.repetitionsPerSet]
+      } else {
+        // Neither old nor new rep data, initialize based on sets
+        const numSets = exerciseToEdit.sets || newFormState.sets
+        newFormState.repetitionsPerSet = Array(numSets).fill(
+          defaultFormValues.repetitionsPerSet[0] || 10
+        )
+      }
+
+      // Final consistency check for repetitionsPerSet length vs sets
+      if (newFormState.repetitionsPerSet.length !== newFormState.sets) {
+        const currentReps = [...newFormState.repetitionsPerSet]
+        const numSets = newFormState.sets
+        const defaultRep = defaultFormValues.repetitionsPerSet[0] || 10
+        const adjustedReps = Array(numSets).fill(defaultRep)
+        for (let i = 0; i < Math.min(numSets, currentReps.length); i++) {
+          adjustedReps[i] = currentReps[i]
+        }
+        newFormState.repetitionsPerSet = adjustedReps
+      }
+      formValues.value = newFormState
+    } else if (!props.editMode) {
       formValues.value = {
-        ...(newValue as FormValues)
+        // Reset to default for new exercise form
+        ...JSON.parse(JSON.stringify(defaultFormValues)),
+        id: Math.floor(Math.random() * 1000000)
       }
     }
   },
@@ -338,6 +422,43 @@ watch(
     }
   },
   { deep: true, immediate: true }
+)
+
+watch(
+  () => formValues.value.sets,
+  (newSetsCount, oldSetsCount) => {
+    if (
+      newSetsCount === undefined ||
+      newSetsCount === null ||
+      newSetsCount === oldSetsCount
+    ) {
+      return
+    }
+
+    const currentRepsArray = formValues.value.repetitionsPerSet
+      ? [...formValues.value.repetitionsPerSet]
+      : []
+    const newRepsArray: number[] = []
+    const defaultRepValue =
+      defaultFormValues.repetitionsPerSet &&
+      defaultFormValues.repetitionsPerSet.length > 0
+        ? defaultFormValues.repetitionsPerSet[0]
+        : 10 // Fallback default
+
+    for (let i = 0; i < newSetsCount; i++) {
+      if (i < currentRepsArray.length) {
+        newRepsArray.push(currentRepsArray[i])
+      } else {
+        // New set added, use last known rep value from existing sets or default
+        const valToAdd =
+          currentRepsArray.length > 0 && i > 0 // Check i > 0 to use previous if available
+            ? currentRepsArray[currentRepsArray.length - 1] // Use the value of the last set when expanding
+            : defaultRepValue
+        newRepsArray.push(valToAdd)
+      }
+    }
+    formValues.value.repetitionsPerSet = newRepsArray.slice(0, newSetsCount) // Ensure correct length
+  }
 )
 </script>
 <style scoped></style>
