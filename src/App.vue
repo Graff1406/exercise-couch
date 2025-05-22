@@ -344,20 +344,20 @@ async function runExercise(
 
   try {
     isInProgressExercise.value = true
-    // if (audioStart) {
-    //   await speak('Упражнение ' + exerciseName + ' начинается ')
-    // }
+    if (audioStart) {
+      await speak('Упражнение ' + exerciseName + ' начинается ')
+    }
 
-    // if (countdownBeforeStart) {
-    //   let countdownBeforeStartInSeconds = 3
+    if (countdownBeforeStart) {
+      let countdownBeforeStartInSeconds = 3
 
-    //   while (countdownBeforeStartInSeconds > 0) {
-    //     await speak(countdownBeforeStartInSeconds.toString())
-    //     await new Promise((resolve) => setTimeout(resolve, 1000))
-    //     countdownBeforeStartInSeconds--
-    //   }
-    //   await speak('Старт')
-    // }
+      while (countdownBeforeStartInSeconds > 0) {
+        await speak(countdownBeforeStartInSeconds.toString())
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        countdownBeforeStartInSeconds--
+      }
+      await speak('Старт')
+    }
 
     // Start exercise
 
