@@ -565,21 +565,6 @@ watch([isInProgressExercise, isInProgressPause], () => {
             @save="loadExercises"
           />
 
-          <div>
-            <pre class="text-error">
-              <span>exercises 1 </span>
-              {{ exercises }}
-            </pre>
-            <pre class="text-worning">
-              <span>groups 1 </span>
-              {{ groups }}
-            </pre>
-            <pre class="text-success">
-              <span>selectedExercises 1 </span>
-              {{ selectedExercises }}
-            </pre>
-          </div>
-
           <draggable
             v-if="groups.length"
             v-model="groups"
