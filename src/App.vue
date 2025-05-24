@@ -568,7 +568,9 @@ watch([isInProgressExercise, isInProgressPause], () => {
             :groups="groups"
             @save="loadExercises"
           />
+
           <draggable
+            v-if="groups.length"
             v-model="groups"
             item-key="id"
             :animation="200"
@@ -789,6 +791,14 @@ watch([isInProgressExercise, isInProgressPause], () => {
               </v-row>
             </template>
           </draggable>
+          <div
+            v-else
+            class="flex justify-center h-100 w-100 align-center mt-16"
+          >
+            <p class="text-center text-indigo px-6">
+              Вы еще не добавили ни одного упражнения.
+            </p>
+          </div>
         </v-container>
       </v-main>
       <audio ref="backgroundAudio" loop></audio>
