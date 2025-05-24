@@ -432,7 +432,7 @@ async function runExercise(
       }
     }
   } catch (e) {
-    console.log(e)
+    console.log('run Exercise error', e)
   }
 }
 
