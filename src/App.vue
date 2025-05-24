@@ -194,6 +194,7 @@ const resetPlayer = () => {
   isInProgressPause.value = false
   isInProgressExercise.value = false
   isTrainingStarted.value = false
+  selectedExercises.value = []
   resetCountdown()
 }
 
@@ -307,23 +308,23 @@ const inProgressPoint = computed(() => {
 })
 
 const groups = computed(() => {
-  const groupMap = new Map<number, Group>()
+  const groupObj: Record<number, Group & { exercises: Exercise[] }> = {}
 
   for (const exercise of exercises.value) {
     const { id, name } = exercise.group
 
-    if (!groupMap.has(id)) {
-      groupMap.set(id, {
+    if (!groupObj[id]) {
+      groupObj[id] = {
         id,
         name,
         exercises: [exercise]
-      })
+      }
     } else {
-      groupMap.get(id)?.exercises?.push(exercise)
+      groupObj[id].exercises.push(exercise)
     }
   }
 
-  return Array.from(groupMap.values())
+  return Object.values(groupObj)
 })
 
 async function runExercise(
@@ -564,6 +565,21 @@ watch([isInProgressExercise, isInProgressPause], () => {
             @save="loadExercises"
           />
 
+          <div>
+            <pre class="text-error">
+              <span>exercises</span>
+              {{ exercises }}
+            </pre>
+            <pre class="text-worning">
+              <span>groups</span>
+              {{ groups }}
+            </pre>
+            <pre class="text-success">
+              <span>selectedExercises</span>
+              {{ selectedExercises }}
+            </pre>
+          </div>
+
           <draggable
             v-if="groups.length"
             v-model="groups"
@@ -790,18 +806,6 @@ watch([isInProgressExercise, isInProgressPause], () => {
             <p class="text-center text-indigo px-6">
               Вы еще не добавили ни одного упражнения.
             </p>
-            <pre class="text-error">
-              <span>exercises</span>
-              {{ exercises }}
-            </pre>
-            <pre class="text-worning">
-              <span>groups</span>
-              {{ groups }}
-            </pre>
-            <pre class="text-success">
-              <span>selectedExercises</span>
-              {{ selectedExercises }}
-            </pre>
           </div>
         </v-container>
       </v-main>
