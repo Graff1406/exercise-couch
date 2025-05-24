@@ -49,8 +49,8 @@ const emit = defineEmits([
 ])
 
 // Methods
-const startPlayer = () => emit('startPlayer')
 const resetPlayer = () => emit('resetPlayer')
+// const startPlayer = () => emit('startPlayer')
 // const pausePlayer = () => emit('pausePlayer')
 // const countinuePlayer = () => emit('countinuePlayer')
 // const nextExercise = () => emit('nextExercise')
