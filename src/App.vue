@@ -314,10 +314,10 @@ const inProgressPoint = computed(() => {
 })
 
 async function runExercise(
-  exercise: Exercise,
+  exercise: Exercise | null,
   isPause: boolean,
   isLastExerciseInCurrentSet: boolean,
-  nextExercise: Exercise
+  nextExercise: Exercise | null
 ) {
   if (!exercise || !isTrainingStarted.value) return
 
@@ -402,10 +402,10 @@ async function runExercise(
 
       audio.play('melodies/timer-tiking.mp3', { volume: 1 })
 
-      if (pause > 5000) {
+      if (pause > 5000 && nextExercise?.exerciseName) {
         setTimeout(() => {
           speak('Следующее упражнение ' + nextExercise.exerciseName)
-        }, Math.round(nextExercise.pause / 2))
+        }, Math.round(nextExercise?.pause / 2))
       }
 
       await pauseCountRepetition(puseInsecond)
@@ -483,8 +483,6 @@ async function runExercises() {
         isPauseNeeded,
         announceSetEnd,
         nextExerciseInCurrentSet.value
-          ? nextExerciseInCurrentSet.value
-          : ({} as Exercise)
       )
 
       // Обновляем completedSets
