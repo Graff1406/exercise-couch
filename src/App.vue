@@ -124,10 +124,6 @@ const closeForm = () => {
   editExercise.value = null
 }
 
-// const createCountdown = (duration: number) => {
-
-// };
-
 const startCountdown = (
   time: number,
   callbackProcessing?: (countdown: number) => void,
@@ -163,9 +159,10 @@ const resetCountdown = () => {
   countdown.value = 0
 }
 
-const startPlayer = () => {
+const startPlayer = (exercises: Exercise[]) => {
   playerState.value = 'playing'
   isTrainingStarted.value = true
+  selectedExercises.value = exercises
   runExercises()
 }
 
@@ -242,11 +239,20 @@ const handleDelete = (exercise: Exercise) => {
     if (index > -1) {
       parsedExercises.splice(index, 1)
       localStorage.setItem('exercises', JSON.stringify(parsedExercises))
-      exercises.value = parsedExercises.map((exercise: Exercise) => ({
-        ...exercise,
-        selectedForPlayer: true
-      }))
+      exercises.value = parsedExercises
     }
+  }
+}
+
+const handleClearGroup = (group: Group) => {
+  const storedExercises = localStorage.getItem('exercises')
+  if (storedExercises) {
+    const parsedExercises = JSON.parse(storedExercises) as Exercise[]
+    const filteredExercises = parsedExercises.filter(
+      (exercise: Exercise) => exercise.group.id !== group.id
+    )
+    localStorage.setItem('exercises', JSON.stringify(filteredExercises))
+    exercises.value = filteredExercises
   }
 }
 
@@ -259,11 +265,7 @@ const formatTime = (totalTime: number): string => {
 }
 
 // Computed properties for footer info
-const selectedExercises = computed(() => {
-  return exercises.value.filter(
-    (exercise: Exercise) => exercise.selectedForPlayer
-  )
-})
+const selectedExercises = ref<Exercise[]>([])
 
 const totalSelectedExercises = computed(() => {
   return selectedExercises.value.length
@@ -288,12 +290,6 @@ const totalExercisesDuration = computed(() => {
   })
 
   return formatTime(totalTime)
-})
-
-const isStartButtonDisabled = computed(() => {
-  return !exercises.value.some(
-    (exercise: Exercise) => exercise.selectedForPlayer
-  )
 })
 
 const inProgressPoint = computed(() => {
@@ -324,10 +320,10 @@ const groups = computed(() => {
       groupMap.set(id, {
         id,
         name,
-        exerciseIds: [exercise.id]
+        exercises: [exercise]
       })
     } else {
-      groupMap.get(id)!.exerciseIds!.push(exercise.id)
+      groupMap.get(id)?.exercises?.push(exercise)
     }
   }
 
@@ -526,10 +522,7 @@ async function runExercises() {
 onMounted(() => {
   const storedExercises = localStorage.getItem('exercises')
   if (storedExercises) {
-    exercises.value = JSON.parse(storedExercises).map((exercise: Exercise) => ({
-      ...exercise,
-      selectedForPlayer: true // Always initialize selectedForPlayer to true
-    }))
+    exercises.value = JSON.parse(storedExercises)
   } else {
     exercises.value = []
     groupExercises.value = []
@@ -576,7 +569,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
             @save="loadExercises"
           />
           <draggable
-            v-model="exercises"
+            v-model="groups"
             item-key="id"
             :animation="200"
             :delay="200"
@@ -596,20 +589,11 @@ watch([isInProgressExercise, isInProgressPause], () => {
                       class="d-flex align-center"
                       style="overflow: hidden"
                     >
-                      <v-checkbox
-                        v-model="element.selectedForPlayer"
-                        hide-details
-                        density="compact"
-                        class="flex-shrink-0"
-                      ></v-checkbox>
-
-                      <span
-                        class="ml-2 text-truncate"
-                        style="flex: 1 1 auto; min-width: 0"
-                        :title="element.exerciseName"
-                      >
-                        {{ element.exerciseName }}
+                      <span class="ml-2 text-truncate">
+                        {{ element.name }}
                       </span>
+
+                      <v-spacer></v-spacer>
 
                       <v-menu>
                         <template v-slot:activator="{ props }">
@@ -624,11 +608,8 @@ watch([isInProgressExercise, isInProgressPause], () => {
                           </v-btn>
                         </template>
                         <v-list>
-                          <v-list-item @click="handleEdit(element)"
-                            >Редактировать</v-list-item
-                          >
-                          <v-list-item @click="handleDelete(element)"
-                            >Удалить</v-list-item
+                          <v-list-item @click="handleClearGroup(element)"
+                            >Очистить</v-list-item
                           >
                         </v-list>
                       </v-menu>
@@ -636,65 +617,173 @@ watch([isInProgressExercise, isInProgressPause], () => {
 
                     <v-divider></v-divider>
 
-                    <v-card-text>
-                      <v-expansion-panels elevation="0">
-                        <v-expansion-panel title="Детали" bg-color="#edeefa">
-                          <v-expansion-panel-text>
-                            <div
-                              v-for="(item, index) in element.repetitionsPerSet"
-                              :key="Math.random()"
-                            >
-                              <p
-                                class="w-100 d-flex justify-space-between font-weight-bold"
-                              >
-                                {{ `Сет ${index + 1}:` }}
-                              </p>
-                              <p
-                                class="w-100 d-flex justify-space-between pl-3"
-                              >
-                                <span>Повторений:</span><span>{{ item }}</span>
-                              </p>
-                              <p
-                                class="w-100 d-flex justify-space-between pl-3"
-                              >
-                                <span>Продолжительность:</span>
-                                <span>
-                                  {{
-                                    formatTime(
-                                      item * element.repetitionDuration +
-                                        element.pause
-                                    )
-                                  }}
-                                </span>
-                              </p>
-                            </div>
+                    <v-card-text class="pa-0 pb-3">
+                      <draggable
+                        v-model="element.exercises"
+                        item-key="id"
+                        :animation="200"
+                        :delay="200"
+                        :delay-on-touch-only="true"
+                        ghost-class="ghost"
+                        chosen-class="chosen"
+                        @end="onDrop"
+                      >
+                        <template #item="{ element }">
+                          <v-row
+                            no-gutters
+                            class="drag-handle d-flex flex-column pa-3 pb-0"
+                          >
+                            <v-col cols="12" class="pt-0">
+                              <v-expansion-panels elevation="0">
+                                <v-expansion-panel
+                                  :title="element.exerciseName"
+                                  bg-color="#edeefa"
+                                >
+                                  <v-expansion-panel-text>
+                                    <div>
+                                      <div
+                                        v-for="(
+                                          item, index
+                                        ) in element.repetitionsPerSet"
+                                        :key="Math.random()"
+                                      >
+                                        <p
+                                          class="w-100 d-flex justify-space-between font-weight-bold"
+                                        >
+                                          {{ `Сет ${index + 1}:` }}
+                                        </p>
+                                        <p
+                                          class="w-100 d-flex justify-space-between pl-3"
+                                        >
+                                          <span>Повторений:</span
+                                          ><span>{{ item }}</span>
+                                        </p>
+                                        <p
+                                          class="w-100 d-flex justify-space-between pl-3"
+                                        >
+                                          <span>Продолжительность:</span>
+                                          <span>
+                                            {{
+                                              formatTime(
+                                                item *
+                                                  element.repetitionDuration +
+                                                  element.pause
+                                              )
+                                            }}
+                                          </span>
+                                        </p>
+                                      </div>
 
-                            <v-divider class="my-4"></v-divider>
+                                      <v-divider class="my-4"></v-divider>
 
-                            <p class="w-100 d-flex justify-space-between">
-                              <span class="font-weight-bold"> Пауза:</span
-                              ><span>{{ formatTime(element.pause) }}</span>
-                            </p>
+                                      <p
+                                        class="w-100 d-flex justify-space-between"
+                                      >
+                                        <span class="font-weight-bold">
+                                          Пауза:</span
+                                        ><span>{{
+                                          formatTime(element.pause)
+                                        }}</span>
+                                      </p>
 
-                            <p class="w-100 d-flex justify-space-between">
-                              <span class="font-weight-bold"> Общее время:</span
-                              ><span>{{
-                                formatTime(
-                                  element.pause * element.sets +
-                                    element.repetitionDuration *
-                                      element.repetitionsPerSet.reduce(
-                                        (sum: number, current: number) =>
-                                          sum + current,
-                                        0
-                                      ) *
-                                      element.sets
-                                )
-                              }}</span>
-                            </p>
-                          </v-expansion-panel-text>
-                        </v-expansion-panel>
-                      </v-expansion-panels>
+                                      <p
+                                        class="w-100 d-flex justify-space-between"
+                                      >
+                                        <span class="font-weight-bold">
+                                          Общее время:</span
+                                        ><span>{{
+                                          formatTime(
+                                            element.pause * element.sets +
+                                              element.repetitionDuration *
+                                                element.repetitionsPerSet.reduce(
+                                                  (
+                                                    sum: number,
+                                                    current: number
+                                                  ) => sum + current,
+                                                  0
+                                                ) *
+                                                element.sets
+                                          )
+                                        }}</span>
+                                      </p>
+                                    </div>
+                                    <v-divider class="my-4"></v-divider>
+                                    <div class="d-flex justify-space-between">
+                                      <v-btn
+                                        color="indigo"
+                                        text="Редактировать"
+                                        variant="tonal"
+                                        @click="handleEdit(element)"
+                                      ></v-btn>
+                                      <v-btn
+                                        color="error"
+                                        text="Удалить"
+                                        variant="tonal"
+                                        @click="handleDelete(element)"
+                                      ></v-btn>
+                                    </div>
+                                  </v-expansion-panel-text>
+                                </v-expansion-panel>
+                              </v-expansion-panels>
+                              <!-- <v-card variant="tonal" color="indigo">
+                                <v-card-title
+                                  class="d-flex align-center"
+                                  style="overflow: hidden"
+                                >
+
+                                  <span class="ml-2 text-truncate">
+                                    {{ element.exerciseName }}
+                                  </span>
+
+                                  <v-spacer></v-spacer>
+
+                                  <v-menu>
+                                    <template v-slot:activator="{ props }">
+                                      <v-btn
+                                        icon
+                                        density="compact"
+                                        variant="plain"
+                                        v-bind="props"
+                                        class="flex-shrink-0"
+                                      >
+                                        <v-icon>mdi-dots-vertical</v-icon>
+                                      </v-btn>
+                                    </template>
+                                    <v-list>
+                                      <v-list-item @click="handleEdit(element)"
+                                        >Редактировать</v-list-item
+                                      >
+                                      <v-list-item
+                                        @click="handleDelete(element)"
+                                        >Удалить</v-list-item
+                                      >
+                                    </v-list>
+                                  </v-menu>
+                                </v-card-title>
+
+                                <v-divider></v-divider>
+
+                                <v-card-text>
+                                  
+                                </v-card-text>
+                              </v-card> -->
+                            </v-col>
+                          </v-row>
+                        </template>
+                      </draggable>
                     </v-card-text>
+
+                    <v-divider></v-divider>
+
+                    <template v-slot:actions>
+                      <v-btn
+                        color="indigo"
+                        text="Начать тренировку"
+                        variant="tonal"
+                        block
+                        @click="startPlayer(element.exercises)"
+                      ></v-btn>
+                    </template>
                   </v-card>
                 </v-col>
               </v-row>
@@ -703,29 +792,6 @@ watch([isInProgressExercise, isInProgressPause], () => {
         </v-container>
       </v-main>
       <audio ref="backgroundAudio" loop></audio>
-
-      <v-footer
-        v-if="!isInProgressExercise"
-        app
-        fixed
-        class="d-flex flex-column"
-        elevation="4"
-        style="border-radius: 16px 16px 0 0"
-      >
-        <SharedFooterContent
-          :playerState="playerState"
-          :isInProgressPause="isInProgressPause"
-          :exerciseInProgress="exerciseInProgress"
-          :inProgressPoint="inProgressPoint"
-          :totalSelectedExercises="totalSelectedExercises"
-          :totalExercisesDuration="totalExercisesDuration"
-          :isStartButtonDisabled="isStartButtonDisabled"
-          @startPlayer="startPlayer"
-          @pausePlayer="pausePlayer"
-          @countinuePlayer="countinuePlayer"
-          @resetPlayer="resetPlayer"
-        />
-      </v-footer>
       <v-bottom-sheet
         v-model="isTrainingStarted"
         @update:model-value="resetPlayer"
@@ -743,7 +809,6 @@ watch([isInProgressExercise, isInProgressPause], () => {
               :inProgressPoint="inProgressPoint"
               :totalSelectedExercises="totalSelectedExercises"
               :totalExercisesDuration="totalExercisesDuration"
-              :isStartButtonDisabled="isStartButtonDisabled"
               :exerciseRepetitionCount="exerciseRepetitionCount"
               :nextExerciseInCurrentSet="nextExerciseInCurrentSet"
               @startPlayer="startPlayer"

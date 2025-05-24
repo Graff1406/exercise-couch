@@ -36,10 +36,6 @@ const props = defineProps({
   totalExercisesDuration: {
     type: String,
     default: '0:00'
-  },
-  isStartButtonDisabled: {
-    type: Boolean,
-    default: true
   }
 })
 
@@ -140,7 +136,7 @@ const percentRemaining = computed(() => {
 
       <v-divider></v-divider>
     </div>
-    <div v-if="playerState === 'idle' || playerState === 'reset'">
+    <!-- <div v-if="playerState === 'idle' || playerState === 'reset'">
       <v-btn
         icon
         size="x-large"
@@ -149,11 +145,10 @@ const percentRemaining = computed(() => {
         density="comfortable"
         class="mx-2"
         @click="startPlayer"
-        :disabled="isStartButtonDisabled"
       >
         <v-icon>mdi-play</v-icon>
       </v-btn>
-    </div>
+    </div> -->
     <div class="d-flex gap-4 justify-center" v-if="isPlayerStarted">
       <!-- <v-btn
         icon
