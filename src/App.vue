@@ -28,16 +28,15 @@ const isInProgressExercise = ref(false)
 const isTrainingStarted = ref(false)
 
 const playerState = ref<PlayerState>('idle')
-const groupExercises = ref<Exercise[]>([])
 const editMode = ref(false)
 const exerciseInProgress = ref<Exercise | null>(null)
 const nextExerciseInCurrentSet = ref<Exercise | null>(null)
 const editExercise = ref<Exercise | null>(null)
 const countdown = ref(0)
 const currentIndex = ref(0)
-// const currentSetIndex = ref(0)
 const exerciseRepetitionCount = ref(0)
 const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
+const selectedExercises = ref<Exercise[]>([])
 
 const utterance = new SpeechSynthesisUtterance()
 
@@ -263,9 +262,6 @@ const formatTime = (totalTime: number): string => {
 
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
-
-// Computed properties for footer info
-const selectedExercises = ref<Exercise[]>([])
 
 const totalSelectedExercises = computed(() => {
   return selectedExercises.value.length
@@ -525,7 +521,6 @@ onMounted(() => {
     exercises.value = JSON.parse(storedExercises)
   } else {
     exercises.value = []
-    groupExercises.value = []
   }
 })
 
@@ -791,13 +786,22 @@ watch([isInProgressExercise, isInProgressPause], () => {
               </v-row>
             </template>
           </draggable>
-          <div
-            v-else
-            class="flex justify-center h-100 w-100 align-center mt-16"
-          >
+          <div v-else class="mt-16">
             <p class="text-center text-indigo px-6">
               Вы еще не добавили ни одного упражнения.
             </p>
+            <pre class="text-error">
+              <span>exercises</span>
+              {{ exercises }}
+            </pre>
+            <pre class="text-worning">
+              <span>groups</span>
+              {{ groups }}
+            </pre>
+            <pre class="text-success">
+              <span>selectedExercises</span>
+              {{ selectedExercises }}
+            </pre>
           </div>
         </v-container>
       </v-main>
