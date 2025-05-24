@@ -15,7 +15,8 @@ import draggable from 'vuedraggable'
 import ExerciseForm from './components/ExerciseForm.vue'
 import SharedFooterContent from './components/SharedFooterContent.vue'
 
-import { type Exercise, type PlayerState } from './models'
+import { type Exercise } from './types/Exercise'
+import { type PlayerState } from './types/PlayerState'
 
 const backgroundAudio = ref<HTMLAudioElement | null>(null)
 
@@ -28,9 +29,9 @@ const isTrainingStarted = ref(false)
 const playerState = ref<PlayerState>('idle')
 const groupExercises = ref<number[]>([])
 const editMode = ref(false)
-const exerciseInProgress = ref<Exercise>({})
-const nextExerciseInCurrentSet = ref<Exercise>({})
-const editExercise = ref<Exercise>({})
+const exerciseInProgress = ref<Exercise | null>(null)
+const nextExerciseInCurrentSet = ref<Exercise | null>(null)
+const editExercise = ref<Exercise | null>(null)
 const countdown = ref(0)
 const currentIndex = ref(0)
 // const currentSetIndex = ref(0)
@@ -119,7 +120,7 @@ const toggleForm = () => {
 const closeForm = () => {
   showForm.value = false
   editMode.value = false
-  editExercise.value = {}
+  editExercise.value = null
 }
 
 // const createCountdown = (duration: number) => {
@@ -272,7 +273,7 @@ const totalExercisesDuration = computed(() => {
   selectedExercises.value.forEach((ex: Exercise) => {
     const sets = ex?.sets || 0
     const repetitions = ex?.repetitionsPerSet?.reduce(
-      (sum: number, current: Exercise) => sum + current,
+      (sum: number, current: number) => sum + current,
       0
     )
     const repetitionDuration = ex?.repetitionDuration || 0
@@ -295,7 +296,7 @@ const isStartButtonDisabled = computed(() => {
 })
 
 const inProgressPoint = computed(() => {
-  const repetitions = exerciseInProgress.value?.repetitions
+  const repetitions = exerciseInProgress.value?.repetitions || 0
   const repetitionDuration = exerciseInProgress.value?.repetitionDuration || 0
   const pause = exerciseInProgress.value?.pause || 0
 
@@ -321,7 +322,7 @@ async function runExercise(
   if (!exercise || !isTrainingStarted.value) return
 
   const exerciseName = exercise.exerciseName
-  const repetitions = exercise.repetitions
+  const repetitions = exercise?.repetitions || 0
   const pause = exercise.pause
   const countdownBeforeStart = exercise.countdownBeforeStart
   const audioStart = exercise.audioStart
@@ -453,16 +454,17 @@ async function runExercises() {
       const isLastExerciseInSet = i === currentExercises.length - 1
       const isLastSet = setIndex === totalSets - 1
 
-      // Определим следующее упражнение:
-      let nextExercise: typeof currentExercise | null = null
-      if (!isLastExerciseInSet) {
-        nextExercise = currentExercises[i + 1]
-      } else if (!isLastSet) {
-        // Следующее упражнение в новом сете — первый
-        nextExercise = currentExercises[0]
-      }
+      // Determine the next exercise
 
-      // Логика паузы и конца сета:
+      // let nextExercise: typeof currentExercise | null = null
+      // if (!isLastExerciseInSet) {
+      //   nextExercise = currentExercises[i + 1]
+      // } else if (!isLastSet) {
+      //   // The next exercise in a new set is the first one
+      //   nextExercise = currentExercises[0]
+      // }
+
+      // Pause and set end logic
       let isPauseNeeded = true
       let announceSetEnd = false
 
@@ -481,6 +483,8 @@ async function runExercises() {
         isPauseNeeded,
         announceSetEnd,
         nextExerciseInCurrentSet.value
+          ? nextExerciseInCurrentSet.value
+          : ({} as Exercise)
       )
 
       // Обновляем completedSets
@@ -659,7 +663,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
                                   element.pause * element.sets +
                                     element.repetitionDuration *
                                       element.repetitionsPerSet.reduce(
-                                        (sum: number, current: Exercise) =>
+                                        (sum: number, current: number) =>
                                           sum + current,
                                         0
                                       ) *

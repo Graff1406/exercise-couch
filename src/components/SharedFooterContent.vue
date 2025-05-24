@@ -1,25 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { VBtn, VDivider } from 'vuetify/components'
-
-interface Exercise {
-  id: number
-  exerciseName: string
-  repetitions: number
-  repetitionDuration: number
-  sets: number
-  completedSets: number
-  pause: number
-  countdownBeforeStart: number
-  gifUrl: string
-  backgroundMelodyLink: string
-  audioStart: boolean
-  audioEnd: boolean
-  announcePauseDuration: boolean
-  announceCountdown: boolean
-  announcePauseEnd: boolean
-  selectedForPlayer: boolean
-}
+import { type Exercise } from '../types/Exercise'
 
 // Define props
 const props = defineProps({
@@ -72,10 +54,10 @@ const emit = defineEmits([
 
 // Methods
 const startPlayer = () => emit('startPlayer')
-const pausePlayer = () => emit('pausePlayer')
-const countinuePlayer = () => emit('countinuePlayer')
 const resetPlayer = () => emit('resetPlayer')
-const nextExercise = () => emit('nextExercise')
+// const pausePlayer = () => emit('pausePlayer')
+// const countinuePlayer = () => emit('countinuePlayer')
+// const nextExercise = () => emit('nextExercise')
 
 function timeStringToMilliseconds(timeStr: string): number {
   const [min, sec] = timeStr.split(':').map(Number)

@@ -159,40 +159,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, computed, watch, reactive } from 'vue'
-interface FormValues {
-  id: number
-  exerciseName: string
-  repetitionsPerSet: number[]
-  repetitionDuration: number
-  sets: number
-  completedSets: number
-  pause: number
-  countdownBeforeStart: number
-  gifUrl: string
-  backgroundMelodyLink: string
-  audioStart: boolean
-  audioEnd: boolean
-  announcePauseDuration: boolean
-  announceCountdown: boolean
-  announcePauseEnd: boolean
-  selectedForPlayer: boolean
-}
+import { ref, defineEmits, computed, watch } from 'vue'
+import { type Exercise } from '../types/Exercise'
 
-type Item = {
-  value: string
-  label: string
-}
+const props = defineProps<{
+  editMode: boolean
+  editExercise: Exercise | null
+}>()
 
-const props = defineProps({
-  editMode: {
-    type: Boolean,
-    required: true
-  },
-  editExercise: {
-    type: Object as () => FormValues
-  }
-})
 const form = ref<any>(null)
 
 const totalExerciseTime = computed(() => {
@@ -299,7 +273,7 @@ const defaultFormValues = {
   backgroundMelodyLink: backgroundMelodyOptions[0]?.link || ''
 }
 
-const formValues = ref<FormValues>({
+const formValues = ref<Exercise>({
   ...defaultFormValues,
   repetitionsPerSet: [...defaultFormValues.repetitionsPerSet] // Ensure a new array instance
 })
@@ -342,7 +316,7 @@ const save = async () => {
 
 watch(
   () => props.editExercise,
-  (exerciseToEdit?: FormValues & { repetitions?: number }) => {
+  (exerciseToEdit?: Exercise | null) => {
     // Allow old 'repetitions' property for migration
     if (
       props.editMode &&
@@ -352,7 +326,7 @@ watch(
       // Start with a deep clone of defaults, then overlay with exerciseToEdit data
       const newFormState = JSON.parse(
         JSON.stringify(defaultFormValues)
-      ) as FormValues
+      ) as Exercise
 
       // Merge all properties from exerciseToEdit
       for (const key in exerciseToEdit) {
