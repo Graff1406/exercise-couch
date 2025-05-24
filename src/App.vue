@@ -17,6 +17,7 @@ import SharedFooterContent from './components/SharedFooterContent.vue'
 
 import { type Exercise } from './types/Exercise'
 import { type PlayerState } from './types/PlayerState'
+import { type Group } from './types/Group'
 
 const backgroundAudio = ref<HTMLAudioElement | null>(null)
 
@@ -27,7 +28,7 @@ const isInProgressExercise = ref(false)
 const isTrainingStarted = ref(false)
 
 const playerState = ref<PlayerState>('idle')
-const groupExercises = ref<number[]>([])
+const groupExercises = ref<Exercise[]>([])
 const editMode = ref(false)
 const exerciseInProgress = ref<Exercise | null>(null)
 const nextExerciseInCurrentSet = ref<Exercise | null>(null)
@@ -313,6 +314,26 @@ const inProgressPoint = computed(() => {
   return formatTime(value)
 })
 
+const groups = computed(() => {
+  const groupMap = new Map<number, Group>()
+
+  for (const exercise of exercises.value) {
+    const { id, name } = exercise.group
+
+    if (!groupMap.has(id)) {
+      groupMap.set(id, {
+        id,
+        name,
+        exerciseIds: [exercise.id]
+      })
+    } else {
+      groupMap.get(id)!.exerciseIds!.push(exercise.id)
+    }
+  }
+
+  return Array.from(groupMap.values())
+})
+
 async function runExercise(
   exercise: Exercise | null,
   isPause: boolean,
@@ -551,6 +572,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
             @close="closeForm"
             :editMode="editMode"
             :editExercise="editExercise"
+            :groups="groups"
             @save="loadExercises"
           />
           <draggable

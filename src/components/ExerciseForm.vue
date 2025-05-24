@@ -14,6 +14,16 @@
           {{ formValues }}
         </pre> -->
         <v-form ref="form" @submit.prevent="save">
+          <v-combobox
+            :modelValue="formValues.group.name || null"
+            :items="props.groups"
+            :rules="[rules.required]"
+            item-title="name"
+            label="Название тренировки"
+            hint="Группа объединющий упражнения для тренировки"
+            required
+            @update:search="handleSelectGroup"
+          ></v-combobox>
           <v-text-field
             v-model="formValues.exerciseName"
             label="Название упражнения"
@@ -161,37 +171,16 @@
 <script setup lang="ts">
 import { ref, defineEmits, computed, watch } from 'vue'
 import { type Exercise } from '../types/Exercise'
+import { type Group } from '../types/Group'
+
+const emit = defineEmits(['close', 'save'])
 
 const props = defineProps<{
   editMode: boolean
   editExercise: Exercise | null
+  groups: Group[]
 }>()
 
-const form = ref<any>(null)
-
-const totalExerciseTime = computed(() => {
-  // Отображаем длительность первого подхода как пример
-  const firstSetRepetitions =
-    formValues.value.repetitionsPerSet &&
-    formValues.value.repetitionsPerSet.length > 0
-      ? formValues.value.repetitionsPerSet[0]
-      : 0
-  return formValues.value.repetitionDuration * (firstSetRepetitions || 0)
-})
-const formattedTotalExerciseTime = computed(() => {
-  return formatMillisecondsToMinutesSeconds(totalExerciseTime.value || 0)
-})
-
-const emit = defineEmits(['close', 'save'])
-const dialog = ref(true)
-
-const rules = ref({
-  required: (value: any) => !!value || 'Обязательное поле',
-  min: (value: number) => value >= 3 || 'Минимальное количество повторений 3',
-  minSets: (value: number) => value >= 1 || 'Минимальное количество подходов 1',
-  maxSets: (value: number) =>
-    value <= 10 || 'Максимальное количество подходов 10'
-})
 const speedOptions = [
   { value: 1000, label: '1 сек.' },
   { value: 1200, label: '1.2 сек.' },
@@ -219,26 +208,42 @@ const backgroundMelodyOptions = [
   { label: 'Melody 2', link: '/path/to/melody2.mp3' },
   { label: 'Melody 3', link: '/path/to/melody3.mp3' }
 ]
+const setsOptions = Array.from({ length: 10 }, (_, i) => i + 1)
 
+// Reactive references for form and dialog state
+
+const form = ref<any>(null)
+const dialog = ref(true)
+const rules = ref({
+  required: (value: any) => !!value || 'Обязательное поле',
+  min: (value: number) => value >= 3 || 'Минимальное количество повторений 3',
+  minSets: (value: number) => value >= 1 || 'Минимальное количество подходов 1',
+  maxSets: (value: number) =>
+    value <= 10 || 'Максимальное количество подходов 10'
+})
 const exerciseNameRules = ref({
   required: (value: string) => !!value || 'Обязательное поле',
   minLength: (value: string) =>
     value.length >= 3 || 'Минимальная длина 3 символа'
 })
-
 const isValid = ref<boolean>(false)
 
-const setsOptions = Array.from({ length: 10 }, (_, i) => i + 1)
+// Computed properties for total exercise time
 
-const formatMillisecondsToMinutesSeconds = (milliseconds: number) => {
-  const totalSeconds = Math.floor(milliseconds / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  const formattedSeconds = seconds.toString().padStart(2, '0')
-  return `${minutes}:${formattedSeconds}`
-}
+const totalExerciseTime = computed(() => {
+  // Отображаем длительность первого подхода как пример
+  const firstSetRepetitions =
+    formValues.value.repetitionsPerSet &&
+    formValues.value.repetitionsPerSet.length > 0
+      ? formValues.value.repetitionsPerSet[0]
+      : 0
+  return formValues.value.repetitionDuration * (firstSetRepetitions || 0)
+})
 
-// Generate pause duration options
+const formattedTotalExerciseTime = computed(() => {
+  return formatMillisecondsToMinutesSeconds(totalExerciseTime.value || 0)
+})
+
 const pauseDurationOptions = computed(() => {
   const options = []
   for (let i = 5; i <= 300; i += 5) {
@@ -270,7 +275,11 @@ const defaultFormValues = {
   selectedForPlayer: true,
   repetitionDuration: speedOptions[2]?.value,
   pause: pauseDurationOptions.value[3]?.value,
-  backgroundMelodyLink: backgroundMelodyOptions[0]?.link || ''
+  backgroundMelodyLink: backgroundMelodyOptions[0]?.link || '',
+  group: {
+    name: '',
+    id: Math.floor(Math.random() * 1000000)
+  }
 }
 
 const formValues = ref<Exercise>({
@@ -278,12 +287,21 @@ const formValues = ref<Exercise>({
   repetitionsPerSet: [...defaultFormValues.repetitionsPerSet] // Ensure a new array instance
 })
 
+// Mathods function to format milliseconds to MM:SS
+
 const validate = async () => {
   if (isValid.value) {
     save()
   }
 }
 
+const formatMillisecondsToMinutesSeconds = (milliseconds: number) => {
+  const totalSeconds = Math.floor(milliseconds / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  const formattedSeconds = seconds.toString().padStart(2, '0')
+  return `${minutes}:${formattedSeconds}`
+}
 const close = () => {
   emit('close')
   dialog.value = false
@@ -312,6 +330,13 @@ const save = async () => {
   }
   emit('save')
   close()
+}
+
+const handleSelectGroup = (selectedGroup: string) => {
+  formValues.value.group = {
+    ...formValues.value.group,
+    name: selectedGroup
+  }
 }
 
 watch(

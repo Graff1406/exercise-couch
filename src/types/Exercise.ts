@@ -16,4 +16,8 @@ export interface Exercise {
   announcePauseEnd: boolean
   selectedForPlayer: boolean
   repetitions?: number
+  group: {
+    id: number
+    name: string
+  }
 }
