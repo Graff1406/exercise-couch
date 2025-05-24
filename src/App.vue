@@ -567,15 +567,15 @@ watch([isInProgressExercise, isInProgressPause], () => {
 
           <div>
             <pre class="text-error">
-              <span>exercises</span>
+              <span>exercises 1 </span>
               {{ exercises }}
             </pre>
             <pre class="text-worning">
-              <span>groups</span>
+              <span>groups 1 </span>
               {{ groups }}
             </pre>
             <pre class="text-success">
-              <span>selectedExercises</span>
+              <span>selectedExercises 1 </span>
               {{ selectedExercises }}
             </pre>
           </div>
