@@ -333,6 +333,17 @@ const save = async () => {
 }
 
 const handleSelectGroup = (selectedGroup: string) => {
+  const groupIndex = props.groups.findIndex(
+    (group) => group.name === selectedGroup
+  )
+  if (groupIndex !== -1) {
+    formValues.value.group = {
+      name: selectedGroup,
+      id: props.groups[groupIndex].id
+    }
+    return
+  }
+
   formValues.value.group = {
     ...formValues.value.group,
     name: selectedGroup
