@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" fullscreen transition="v-bottom-sheet-transition">
+  <v-dialog v-model="dialog" transition="dialog-bottom-transition" fullscreen>
     <v-card>
       <v-toolbar>
         <v-toolbar-title>Добавить упражнение</v-toolbar-title>
@@ -9,7 +9,7 @@
         </v-btn>
       </v-toolbar>
 
-      <v-card-text class="mb-12">
+      <v-card-text class="mb-12 pa-3">
         <!-- <pre>
           {{ formValues }}
         </pre> -->
@@ -57,6 +57,17 @@
             ></v-text-field>
           </div>
 
+          <v-select
+            v-model="formValues.pause"
+            :items="pauseDurationOptions"
+            :item-title="'label'"
+            item-value="value"
+            label="Длительность паузы"
+            hint="Длительность длинной паузы в минутах и секундах"
+            :rules="[rules.required]"
+          >
+          </v-select>
+
           <v-expansion-panels>
             <v-expansion-panel title="Общие настройки">
               <v-expansion-panel-text>
@@ -72,6 +83,7 @@
                 <v-select
                   v-model="formValues.countdownBeforeStart"
                   :items="[
+                    { value: 0, label: 'Не объявлять' },
                     { value: 3000, label: 'За 3 секунды' },
                     { value: 5000, label: 'За 5 секунд' }
                   ]"
@@ -85,12 +97,22 @@
                 <v-checkbox
                   class="mr-2"
                   v-model="formValues.audioStart"
-                  label="Озвучка начала"
+                  label="Озвучить: начала тренировки"
+                  hide-details
+                ></v-checkbox>
+                <v-checkbox
+                  v-model="formValues.audioMiddle"
+                  label="Озвучить: середина упражнения"
+                  hide-details
+                ></v-checkbox>
+                <v-checkbox
+                  v-model="formValues.audioBeforeEnd"
+                  label="Озвучить: предпоследнее повторение"
                   hide-details
                 ></v-checkbox>
                 <v-checkbox
                   v-model="formValues.audioEnd"
-                  label="Озвучка конца"
+                  label="Озвучить: конец тренировки"
                   hide-details
                 ></v-checkbox>
 
@@ -113,16 +135,6 @@
             </v-expansion-panel>
             <v-expansion-panel title="Настройка паузы">
               <v-expansion-panel-text class="d-flex flex-column">
-                <v-select
-                  v-model="formValues.pause"
-                  :items="pauseDurationOptions"
-                  :item-title="'label'"
-                  item-value="value"
-                  label="Длительность паузы"
-                  hint="Длительность длинной паузы в минутах и секундах"
-                  :rules="[rules.required]"
-                >
-                </v-select>
                 <div>
                   <v-card-title>Оповещения во время паузы</v-card-title>
                   <v-checkbox
@@ -246,7 +258,7 @@ const formattedTotalExerciseTime = computed(() => {
 
 const pauseDurationOptions = computed(() => {
   const options = []
-  for (let i = 5; i <= 300; i += 5) {
+  for (let i = 0; i <= 300; i += 5) {
     const value = i * 1000 // in milliseconds
     const minutes = Math.floor(i / 60)
     const seconds = i % 60
@@ -257,7 +269,7 @@ const pauseDurationOptions = computed(() => {
 })
 
 const _defaultSets = 3
-const _defaultRepetitionsValue = 14
+const _defaultRepetitionsValue = null
 
 const defaultFormValues = {
   id: Math.floor(Math.random() * 1000000),
@@ -267,14 +279,16 @@ const defaultFormValues = {
   completedSets: 0,
   repetitionsPerSet: Array(_defaultSets).fill(_defaultRepetitionsValue),
   countdownBeforeStart: 3000,
-  audioEnd: true,
   audioStart: true,
+  audioMiddle: false,
+  audioBeforeEnd: false,
+  audioEnd: true,
   announcePauseEnd: true,
   announceCountdown: true,
   announcePauseDuration: true,
   selectedForPlayer: true,
   repetitionDuration: speedOptions[2]?.value,
-  pause: pauseDurationOptions.value[3]?.value,
+  pause: pauseDurationOptions.value[1]?.value,
   backgroundMelodyLink: backgroundMelodyOptions[0]?.link || '',
   group: {
     name: '',
@@ -471,4 +485,3 @@ watch(
   }
 )
 </script>
-<style scoped></style>

@@ -10,6 +10,8 @@ export interface Exercise {
   gifUrl: string
   backgroundMelodyLink: string
   audioStart: boolean
+  audioMiddle: boolean
+  audioBeforeEnd: boolean
   audioEnd: boolean
   announcePauseDuration: boolean
   announceCountdown: boolean

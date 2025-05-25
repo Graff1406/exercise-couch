@@ -723,48 +723,6 @@ watch([isInProgressExercise, isInProgressPause], () => {
                                   </v-expansion-panel-text>
                                 </v-expansion-panel>
                               </v-expansion-panels>
-                              <!-- <v-card variant="tonal" color="indigo">
-                                <v-card-title
-                                  class="d-flex align-center"
-                                  style="overflow: hidden"
-                                >
-
-                                  <span class="ml-2 text-truncate">
-                                    {{ element.exerciseName }}
-                                  </span>
-
-                                  <v-spacer></v-spacer>
-
-                                  <v-menu>
-                                    <template v-slot:activator="{ props }">
-                                      <v-btn
-                                        icon
-                                        density="compact"
-                                        variant="plain"
-                                        v-bind="props"
-                                        class="flex-shrink-0"
-                                      >
-                                        <v-icon>mdi-dots-vertical</v-icon>
-                                      </v-btn>
-                                    </template>
-                                    <v-list>
-                                      <v-list-item @click="handleEdit(element)"
-                                        >Редактировать</v-list-item
-                                      >
-                                      <v-list-item
-                                        @click="handleDelete(element)"
-                                        >Удалить</v-list-item
-                                      >
-                                    </v-list>
-                                  </v-menu>
-                                </v-card-title>
-
-                                <v-divider></v-divider>
-
-                                <v-card-text>
-                                  
-                                </v-card-text>
-                              </v-card> -->
                             </v-col>
                           </v-row>
                         </template>
