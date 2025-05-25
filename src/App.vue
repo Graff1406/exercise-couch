@@ -43,9 +43,11 @@ const currentIndex = ref(0)
 const exerciseRepetitionCount = ref(0)
 const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const selectedExercises = ref<Exercise[]>([])
+
 // const pauseBetweenSets = ref(saved ? Number(saved) : 0)
 
 const utterance = new SpeechSynthesisUtterance()
+let countRepetitionInterval: ReturnType<typeof setInterval> | null = null
 
 const loadExercises = () => {
   const storedExercises = localStorage.getItem('exercises')
@@ -53,6 +55,9 @@ const loadExercises = () => {
 }
 
 const speak = (text: string, { rate = 1 } = { rate: 1 }): Promise<void> => {
+  if (playerState.value === 'reset') {
+    return Promise.resolve()
+  }
   return new Promise((resolve) => {
     utterance.rate = rate
     utterance.text = text
@@ -79,7 +84,6 @@ const calculateSpeechRate = (exerciseSpeed: number): number => {
 
 const startCountRepetition = (interval: number = 1000, repetitions: number) => {
   let count = 0
-  let countRepetitionInterval: ReturnType<typeof setInterval> | null = null
 
   return {
     counter: (callbackProcessing?: (count: number) => void) => {
@@ -195,7 +199,7 @@ const pausePlayer = () => {
 }
 
 const resetPlayer = () => {
-  playerState.value = 'idle'
+  playerState.value = 'reset'
   // Stop background audio and clear vocalizations
   if (backgroundAudio.value) {
     backgroundAudio.value.load()
@@ -207,6 +211,8 @@ const resetPlayer = () => {
   isInProgressExercise.value = false
   isTrainingStarted.value = false
   selectedExercises.value = []
+  clearInterval(countRepetitionInterval!)
+  countRepetitionInterval = null
   resetCountdown()
 }
 
@@ -365,11 +371,11 @@ async function runExercise(
   try {
     isInProgressExercise.value = true
     if (audioStart) {
-      await speak('Упражнение ' + exerciseName + ' начинается ')
+      await speak('Упражнение ' + exerciseName + ' начинается ', { rate: 1.3 })
     }
 
     if (audioQuantityExercise) {
-      await speak(`Количество повторений ${repetitions}`)
+      await speak(`Количество повторений ${repetitions}`, { rate: 1.3 })
     }
 
     if (countdownBeforeStart) {
@@ -377,19 +383,19 @@ async function runExercise(
 
       while (countdownBeforeStartInSeconds > 0) {
         await speak(countdownBeforeStartInSeconds.toString())
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 600))
         countdownBeforeStartInSeconds--
       }
-      await speak('Старт')
+      await speak('Старт', { rate: 1.3 })
     }
 
     // Start exercise
 
+    audio.play('melodies/melody_1.mp3')
+
     startCountdown(repetitionDuration * repetitions, (time: number) => {
       countdown.value = time * 1000
     })
-
-    audio.play('melodies/melody_1.mp3')
 
     const repetition = startCountRepetition(repetitionDuration, repetitions)
 
@@ -769,11 +775,10 @@ watch([isInProgressExercise, isInProgressPause], () => {
                       <div>
                         <p class="text-caption text-center pa-3">
                           {{
-                            `Использовуеться пауза (${formatTime(
+                            `Между сетами использовуеться пауза (${formatTime(
                               element.exercises[element.exercises.length - 1]
                                 ?.pause
-                            )}) посленего упражнения между
-                              сетами`
+                            )}) посленего упражнения`
                           }}
                         </p>
                         <!-- <v-select
