@@ -60,7 +60,7 @@
           <v-select
             v-model="formValues.pause"
             :items="pauseDurationOptions"
-            :item-title="'label'"
+            item-title="label"
             item-value="value"
             label="Длительность паузы"
             hint="Длительность длинной паузы в минутах и секундах"
@@ -96,8 +96,14 @@
                 </v-select>
                 <v-checkbox
                   class="mr-2"
+                  v-model="formValues.audioQuantityExercise"
+                  label="Озвучить: количество повторений"
+                  hide-details
+                ></v-checkbox>
+                <v-checkbox
+                  class="mr-2"
                   v-model="formValues.audioStart"
-                  label="Озвучить: начала тренировки"
+                  label="Озвучить: начала упражнения"
                   hide-details
                 ></v-checkbox>
                 <v-checkbox
@@ -112,7 +118,7 @@
                 ></v-checkbox>
                 <v-checkbox
                   v-model="formValues.audioEnd"
-                  label="Озвучить: конец тренировки"
+                  label="Озвучить: конец упражнения"
                   hide-details
                 ></v-checkbox>
 
@@ -184,7 +190,9 @@
 import { ref, defineEmits, computed, watch } from 'vue'
 import { type Exercise } from '../types/Exercise'
 import { type Group } from '../types/Group'
+import { usePauseDurationOptions } from '../composables/usePauseDurationOptions'
 
+const { pauseDurationOptions } = usePauseDurationOptions()
 const emit = defineEmits(['close', 'save'])
 
 const props = defineProps<{
@@ -256,18 +264,6 @@ const formattedTotalExerciseTime = computed(() => {
   return formatMillisecondsToMinutesSeconds(totalExerciseTime.value || 0)
 })
 
-const pauseDurationOptions = computed(() => {
-  const options = []
-  for (let i = 0; i <= 300; i += 5) {
-    const value = i * 1000 // in milliseconds
-    const minutes = Math.floor(i / 60)
-    const seconds = i % 60
-    const label = `${minutes}:${seconds.toString().padStart(2, '0')}`
-    options.push({ value, label })
-  }
-  return options
-})
-
 const _defaultSets = 3
 const _defaultRepetitionsValue = null
 
@@ -279,6 +275,7 @@ const defaultFormValues = {
   completedSets: 0,
   repetitionsPerSet: Array(_defaultSets).fill(_defaultRepetitionsValue),
   countdownBeforeStart: 3000,
+  audioQuantityExercise: false,
   audioStart: true,
   audioMiddle: false,
   audioBeforeEnd: false,

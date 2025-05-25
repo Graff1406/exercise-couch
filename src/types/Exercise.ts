@@ -9,6 +9,7 @@ export interface Exercise {
   countdownBeforeStart: number
   gifUrl: string
   backgroundMelodyLink: string
+  audioQuantityExercise: boolean
   audioStart: boolean
   audioMiddle: boolean
   audioBeforeEnd: boolean

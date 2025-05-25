@@ -18,14 +18,20 @@ import SharedFooterContent from './components/SharedFooterContent.vue'
 import { type Exercise } from './types/Exercise'
 import { type PlayerState } from './types/PlayerState'
 import { type Group } from './types/Group'
+// import { usePauseDurationOptions } from './composables/usePauseDurationOptions'
+
+// const { pauseDurationOptions } = usePauseDurationOptions()
+// const saved = localStorage.getItem('pauseBetweenSets')
 
 const backgroundAudio = ref<HTMLAudioElement | null>(null)
 
+const selectRef = ref(null)
 const showForm = ref(false)
 const exercises = ref<Exercise[]>([])
 const isInProgressPause = ref(false)
 const isInProgressExercise = ref(false)
 const isTrainingStarted = ref(false)
+// const isLastExercisePauseUsed = ref(!Boolean(saved))
 
 const playerState = ref<PlayerState>('idle')
 const editMode = ref(false)
@@ -37,6 +43,7 @@ const currentIndex = ref(0)
 const exerciseRepetitionCount = ref(0)
 const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const selectedExercises = ref<Exercise[]>([])
+// const pauseBetweenSets = ref(saved ? Number(saved) : 0)
 
 const utterance = new SpeechSynthesisUtterance()
 
@@ -158,7 +165,12 @@ const resetCountdown = () => {
   countdown.value = 0
 }
 
-const startPlayer = (exercises: Exercise[]) => {
+const startPlayer = async (exercises: Exercise[]) => {
+  // Check if selectRef exists and has a validate method before calling it
+  if (selectRef.value && 'validate' in selectRef.value) {
+    const erros = await (selectRef.value as any).validate()
+    if (erros?.length) return // Stop if validation fails
+  }
   playerState.value = 'playing'
   isTrainingStarted.value = true
   selectedExercises.value = exercises
@@ -339,7 +351,10 @@ async function runExercise(
   const repetitions = exercise?.repetitions || 0
   const pause = exercise.pause
   const countdownBeforeStart = exercise.countdownBeforeStart
+  const audioQuantityExercise = exercise.audioQuantityExercise
   const audioStart = exercise.audioStart
+  const audioMiddle = exercise.audioMiddle
+  const audioBeforeEnd = exercise.audioBeforeEnd
   const audioEnd = exercise.audioEnd
   const announcePauseDuration = exercise.announcePauseDuration
   const announcePauseEnd = exercise.announcePauseEnd
@@ -351,6 +366,10 @@ async function runExercise(
     isInProgressExercise.value = true
     if (audioStart) {
       await speak('Упражнение ' + exerciseName + ' начинается ')
+    }
+
+    if (audioQuantityExercise) {
+      await speak(`Количество повторений ${repetitions}`)
     }
 
     if (countdownBeforeStart) {
@@ -378,11 +397,15 @@ async function runExercise(
       exerciseRepetitionCount.value = count
       const rate = calculateSpeechRate(repetitionDuration)
 
-      if (repetitions > 8 && repetitions - 1 === count) {
+      if (repetitions > 8 && repetitions - 1 === count && audioBeforeEnd) {
         speak('Еще раз', {
           rate
         })
-      } else if (repetitions > 8 && Math.ceil(repetitions / 2) === count) {
+      } else if (
+        repetitions > 8 &&
+        Math.ceil(repetitions / 2) === count &&
+        audioMiddle
+      ) {
         speak('Половина', { rate })
       } else {
         speak(`${count}`, { rate })
@@ -406,6 +429,11 @@ async function runExercise(
 
       if (isLastExerciseInCurrentSet) await speak('Конец текущего сета')
 
+      // const puseInsecond =
+      //   !isLastExercisePauseUsed.value && isLastExerciseInCurrentSet
+      //     ? pauseBetweenSets.value / 1000
+      //     : pause / 1000
+
       const puseInsecond = pause / 1000
 
       if (announcePauseDuration) await speak(`Пауза ${puseInsecond} секунд`)
@@ -414,7 +442,7 @@ async function runExercise(
         countdown.value = time * 1000
       })
 
-      audio.play('melodies/timer-tiking.mp3', { volume: 1 })
+      audio.play('melodies/timer-tiking.mp3', { volume: 0.8 })
 
       if (pause > 5000 && nextExercise?.exerciseName) {
         setTimeout(() => {
@@ -528,6 +556,16 @@ onMounted(() => {
 watch([isInProgressExercise, isInProgressPause], () => {
   countdown.value = 0
 })
+
+// watch(isLastExercisePauseUsed, (pause: boolean) => {
+//   if (pause) {
+//     pauseBetweenSets.value = 0
+//   }
+// })
+
+// watch(pauseBetweenSets, (pause: number) => {
+//   localStorage.setItem('pauseBetweenSets', pause.toString())
+// })
 </script>
 
 <template>
@@ -615,7 +653,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
 
                     <v-divider></v-divider>
 
-                    <v-card-text class="pa-0 pb-3">
+                    <v-card-text class="pa-0">
                       <draggable
                         v-model="element.exercises"
                         item-key="id"
@@ -638,7 +676,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
                                   bg-color="#edeefa"
                                 >
                                   <v-expansion-panel-text>
-                                    <div>
+                                    <div class="text-indigo user-select-none">
                                       <div
                                         v-for="(
                                           item, index
@@ -677,7 +715,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
                                       <p
                                         class="w-100 d-flex justify-space-between"
                                       >
-                                        <span class="font-weight-bold">
+                                        <span class="font-weight-medium">
                                           Пауза:</span
                                         ><span>{{
                                           formatTime(element.pause)
@@ -687,7 +725,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
                                       <p
                                         class="w-100 d-flex justify-space-between"
                                       >
-                                        <span class="font-weight-bold">
+                                        <span class="font-weight-medium">
                                           Общее время:</span
                                         ><span>{{
                                           formatTime(
@@ -727,6 +765,55 @@ watch([isInProgressExercise, isInProgressPause], () => {
                           </v-row>
                         </template>
                       </draggable>
+
+                      <div>
+                        <p class="text-caption text-center pa-3">
+                          {{
+                            `Использовуеться пауза (${formatTime(
+                              element.exercises[element.exercises.length - 1]
+                                ?.pause
+                            )}) посленего упражнения между
+                              сетами`
+                          }}
+                        </p>
+                        <!-- <v-select
+                          v-if="!isLastExercisePauseUsed"
+                          v-model="pauseBetweenSets"
+                          ref="selectRef"
+                          :items="pauseDurationOptions"
+                          :rules="[
+                            (v) =>
+                              !!v || 'Выберите длительность паузы между сетами'
+                          ]"
+                          item-title="label"
+                          item-value="value"
+                          label="Длительность паузы между сетами"
+                          hint="Пауза между сетами"
+                          density="comfortable"
+                          variant="outlined"
+                        >
+                        </v-select>
+
+                        <v-checkbox
+                          v-model="isLastExercisePauseUsed"
+                          :items="pauseDurationOptions"
+                          density="comfortable"
+                          hide-details
+                        >
+                          <template v-slot:label>
+                            <span class="text-caption text-start">
+                              {{
+                                `Использовать паузу (${formatTime(
+                                  element.exercises[
+                                    element.exercises.length - 1
+                                  ]?.pause
+                                )}) посленего упражнения между
+                              сетами`
+                              }}
+                            </span>
+                          </template>
+                        </v-checkbox> -->
+                      </div>
                     </v-card-text>
 
                     <v-divider></v-divider>
@@ -742,6 +829,8 @@ watch([isInProgressExercise, isInProgressPause], () => {
                     </template>
                   </v-card>
                 </v-col>
+
+                <v-divider class="mt-3"></v-divider>
               </v-row>
             </template>
           </draggable>
@@ -800,5 +889,10 @@ watch([isInProgressExercise, isInProgressPause], () => {
 
 .chosen {
   background-color: #c5cae9;
+}
+.v-expansion-panel-title {
+  outline: none;
+  border: none;
+  box-shadow: none;
 }
 </style>
