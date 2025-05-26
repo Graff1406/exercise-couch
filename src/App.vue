@@ -55,15 +55,22 @@ const loadExercises = () => {
 }
 
 const speak = (text: string, { rate = 1 } = { rate: 1 }): Promise<void> => {
-  if (playerState.value === 'reset') {
-    return Promise.resolve()
-  }
-  return new Promise((resolve) => {
+  const handler = (resolve: () => void) => {
     utterance.rate = rate
     utterance.text = text
     utterance.onend = () => resolve()
     speechSynthesis.speak(utterance)
-  })
+  }
+
+  try {
+    if (playerState.value === 'reset') {
+      return Promise.resolve()
+    }
+    return new Promise<void>(handler)
+  } catch (error) {
+    console.error('Speech synthesis error:', error)
+    return new Promise<void>(handler)
+  }
 }
 
 const calculateSpeechRate = (exerciseSpeed: number): number => {
@@ -190,11 +197,12 @@ const countinuePlayer = () => {
 
 const pausePlayer = () => {
   playerState.value = 'paused'
-  // Pause background audio
   if (backgroundAudio.value) {
     backgroundAudio.value.pause()
-    speechSynthesis.pause()
   }
+
+  speechSynthesis.pause()
+
   pauseCountdown()
 }
 
@@ -660,117 +668,132 @@ watch([isInProgressExercise, isInProgressPause], () => {
                     <v-divider></v-divider>
 
                     <v-card-text class="pa-0">
-                      <draggable
-                        v-model="element.exercises"
-                        item-key="id"
-                        :animation="200"
-                        :delay="200"
-                        :delay-on-touch-only="true"
-                        ghost-class="ghost"
-                        chosen-class="chosen"
-                        @end="onDrop"
-                      >
-                        <template #item="{ element }">
-                          <v-row
-                            no-gutters
-                            class="drag-handle d-flex flex-column pa-3 pb-0"
+                      <v-expansion-panels elevation="0" class="pa-3 pb-0">
+                        <v-expansion-panel bg-color="#edeefa">
+                          <v-expansion-panel-title
+                            class="text-indigo bg-indigo-lighten-4"
                           >
-                            <v-col cols="12" class="pt-0">
-                              <v-expansion-panels elevation="0">
-                                <v-expansion-panel
-                                  :title="element.exerciseName"
-                                  bg-color="#edeefa"
+                            Упражнения
+                          </v-expansion-panel-title>
+                          <v-expansion-panel-text class="pa-1">
+                            <draggable
+                              v-model="element.exercises"
+                              item-key="id"
+                              :animation="200"
+                              :delay="200"
+                              :delay-on-touch-only="true"
+                              ghost-class="ghost"
+                              chosen-class="chosen"
+                              @end="onDrop"
+                            >
+                              <template #item="{ element }">
+                                <v-row
+                                  no-gutters
+                                  class="drag-handle d-flex flex-column mt-1"
                                 >
-                                  <v-expansion-panel-text>
-                                    <div class="text-indigo user-select-none">
-                                      <div
-                                        v-for="(
-                                          item, index
-                                        ) in element.repetitionsPerSet"
-                                        :key="Math.random()"
+                                  <v-col cols="12" class="pt-0">
+                                    <v-expansion-panels elevation="0">
+                                      <v-expansion-panel
+                                        :title="element.exerciseName"
+                                        bg-color="#edeefa"
                                       >
-                                        <p
-                                          class="w-100 d-flex justify-space-between font-weight-bold"
-                                        >
-                                          {{ `Сет ${index + 1}:` }}
-                                        </p>
-                                        <p
-                                          class="w-100 d-flex justify-space-between pl-3"
-                                        >
-                                          <span>Повторений:</span
-                                          ><span>{{ item }}</span>
-                                        </p>
-                                        <p
-                                          class="w-100 d-flex justify-space-between pl-3"
-                                        >
-                                          <span>Продолжительность:</span>
-                                          <span>
-                                            {{
-                                              formatTime(
-                                                item *
-                                                  element.repetitionDuration +
-                                                  element.pause
-                                              )
-                                            }}
-                                          </span>
-                                        </p>
-                                      </div>
+                                        <v-expansion-panel-text class="pa-3">
+                                          <div
+                                            class="text-indigo user-select-none"
+                                          >
+                                            <div
+                                              v-for="(
+                                                item, index
+                                              ) in element.repetitionsPerSet"
+                                              :key="Math.random()"
+                                            >
+                                              <p
+                                                class="w-100 d-flex justify-space-between font-weight-bold"
+                                              >
+                                                {{ `Сет ${index + 1}:` }}
+                                              </p>
+                                              <p
+                                                class="w-100 d-flex justify-space-between pl-3"
+                                              >
+                                                <span>Повторений:</span
+                                                ><span>{{ item }}</span>
+                                              </p>
+                                              <p
+                                                class="w-100 d-flex justify-space-between pl-3"
+                                              >
+                                                <span>Продолжительность:</span>
+                                                <span>
+                                                  {{
+                                                    formatTime(
+                                                      item *
+                                                        element.repetitionDuration +
+                                                        element.pause
+                                                    )
+                                                  }}
+                                                </span>
+                                              </p>
+                                            </div>
 
-                                      <v-divider class="my-4"></v-divider>
+                                            <v-divider class="my-4"></v-divider>
 
-                                      <p
-                                        class="w-100 d-flex justify-space-between"
-                                      >
-                                        <span class="font-weight-medium">
-                                          Пауза:</span
-                                        ><span>{{
-                                          formatTime(element.pause)
-                                        }}</span>
-                                      </p>
+                                            <p
+                                              class="w-100 d-flex justify-space-between"
+                                            >
+                                              <span class="font-weight-medium">
+                                                Пауза:</span
+                                              ><span>{{
+                                                formatTime(element.pause)
+                                              }}</span>
+                                            </p>
 
-                                      <p
-                                        class="w-100 d-flex justify-space-between"
-                                      >
-                                        <span class="font-weight-medium">
-                                          Общее время:</span
-                                        ><span>{{
-                                          formatTime(
-                                            element.pause * element.sets +
-                                              element.repetitionDuration *
-                                                element.repetitionsPerSet.reduce(
-                                                  (
-                                                    sum: number,
-                                                    current: number
-                                                  ) => sum + current,
-                                                  0
-                                                ) *
-                                                element.sets
-                                          )
-                                        }}</span>
-                                      </p>
-                                    </div>
-                                    <v-divider class="my-4"></v-divider>
-                                    <div class="d-flex justify-space-between">
-                                      <v-btn
-                                        color="indigo"
-                                        text="Редактировать"
-                                        variant="tonal"
-                                        @click="handleEdit(element)"
-                                      ></v-btn>
-                                      <v-btn
-                                        color="error"
-                                        text="Удалить"
-                                        variant="tonal"
-                                        @click="handleDelete(element)"
-                                      ></v-btn>
-                                    </div>
-                                  </v-expansion-panel-text>
-                                </v-expansion-panel>
-                              </v-expansion-panels>
-                            </v-col>
-                          </v-row>
-                        </template>
-                      </draggable>
+                                            <p
+                                              class="w-100 d-flex justify-space-between"
+                                            >
+                                              <span class="font-weight-medium">
+                                                Общее время:</span
+                                              ><span>{{
+                                                formatTime(
+                                                  element.pause * element.sets +
+                                                    element.repetitionDuration *
+                                                      element.repetitionsPerSet.reduce(
+                                                        (
+                                                          sum: number,
+                                                          current: number
+                                                        ) => sum + current,
+                                                        0
+                                                      ) *
+                                                      element.sets
+                                                )
+                                              }}</span>
+                                            </p>
+                                          </div>
+                                          <v-divider class="my-4"></v-divider>
+                                          <div
+                                            class="d-flex justify-space-between"
+                                          >
+                                            <v-btn
+                                              color="indigo"
+                                              text="Редактировать"
+                                              variant="tonal"
+                                              @click="handleEdit(element)"
+                                            ></v-btn>
+                                            <v-btn
+                                              color="error"
+                                              text="Удалить"
+                                              variant="tonal"
+                                              @click="handleDelete(element)"
+                                            ></v-btn>
+                                          </div>
+                                        </v-expansion-panel-text>
+                                      </v-expansion-panel>
+                                    </v-expansion-panels>
+                                  </v-col>
+                                </v-row>
+                              </template>
+                            </draggable>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
 
                       <div>
                         <p class="text-caption text-center pa-3">
@@ -899,5 +922,8 @@ watch([isInProgressExercise, isInProgressPause], () => {
   outline: none;
   border: none;
   box-shadow: none;
+}
+.v-expansion-panel-text__wrapper {
+  padding: 0 !important;
 }
 </style>

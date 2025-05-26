@@ -131,7 +131,7 @@
                 <v-select
                   v-model="formValues.backgroundMelodyLink"
                   :items="backgroundMelodyOptions"
-                  label="Фоновая мелодия"
+                  label="Мелодия в процессе упражнения"
                   item-title="label"
                   item-value="link"
                   hint="Фон для упражнения"

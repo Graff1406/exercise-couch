@@ -51,8 +51,8 @@ const emit = defineEmits([
 // Methods
 const resetPlayer = () => emit('resetPlayer')
 // const startPlayer = () => emit('startPlayer')
-// const pausePlayer = () => emit('pausePlayer')
-// const countinuePlayer = () => emit('countinuePlayer')
+const pausePlayer = () => emit('pausePlayer')
+const countinuePlayer = () => emit('countinuePlayer')
 // const nextExercise = () => emit('nextExercise')
 
 function timeStringToMilliseconds(timeStr: string): number {
@@ -149,23 +149,25 @@ const percentRemaining = computed(() => {
         <v-icon>mdi-play</v-icon>
       </v-btn>
     </div> -->
-    <div class="d-flex gap-4 justify-center" v-if="isPlayerStarted">
-      <!-- <v-btn
+    <div class="d-flex justify-center w-full" v-if="isPlayerStarted">
+      <v-btn
         icon
         color="warning"
         size="x-large"
         variant="tonal"
         density="comfortable"
+        class="mx-2"
         @click="pausePlayer"
       >
         <v-icon>mdi-pause</v-icon>
-      </v-btn> -->
+      </v-btn>
       <v-btn
         icon
         color="error"
         size="x-large"
         variant="tonal"
         density="comfortable"
+        class="mx-2"
         @click="resetPlayer"
       >
         <v-icon>mdi-stop</v-icon>
@@ -181,7 +183,7 @@ const percentRemaining = computed(() => {
         <v-icon>mdi-skip-next</v-icon>
       </v-btn> -->
     </div>
-    <!-- <div v-if="isPlayerPaused">
+    <div v-if="isPlayerPaused">
       <v-btn
         icon
         color="indigo"
@@ -204,7 +206,7 @@ const percentRemaining = computed(() => {
       >
         <v-icon>mdi-stop</v-icon>
       </v-btn>
-    </div> -->
+    </div>
   </div>
   <div class="w-100"><v-divider></v-divider></div>
   <div class="pt-2 text-caption w-100 d-flex justify-space-between">
