@@ -195,7 +195,7 @@ const countinuePlayer = () => {
   speechSynthesis.resume()
 }
 
-const pausePlayer = () => {
+const pausePlayer = async () => {
   playerState.value = 'paused'
   if (backgroundAudio.value) {
     backgroundAudio.value.pause()
@@ -671,7 +671,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
                       <v-expansion-panels elevation="0" class="pa-3 pb-0">
                         <v-expansion-panel bg-color="#edeefa">
                           <v-expansion-panel-title
-                            class="text-indigo bg-indigo-lighten-4"
+                            class="text-indigo bg-indigo-lighten-5 font-weight-regular"
                           >
                             Упражнения
                           </v-expansion-panel-title>

@@ -86,7 +86,7 @@ const percentRemaining = computed(() => {
 
 <template>
   <div class="pb-1 w-100">
-    <div v-show="isPlayerStarted || isPlayerPaused" class="pb-1">
+    <div v-show="isPlayerStarted || isPlayerPaused" class="pb-3">
       <div class="d-flex align-center justify-space-between mb-2">
         <div>
           <p :title="exerciseInProgress?.exerciseName">
@@ -151,26 +151,26 @@ const percentRemaining = computed(() => {
     </div> -->
     <div class="d-flex justify-center w-full" v-if="isPlayerStarted">
       <v-btn
-        icon
         color="warning"
-        size="x-large"
+        size="large"
         variant="tonal"
         density="comfortable"
         class="mx-2"
         @click="pausePlayer"
       >
-        <v-icon>mdi-pause</v-icon>
+        <!-- <v-icon>mdi-pause</v-icon> -->
+        Приостановить
       </v-btn>
       <v-btn
-        icon
         color="error"
-        size="x-large"
+        size="large"
         variant="tonal"
         density="comfortable"
         class="mx-2"
         @click="resetPlayer"
       >
         <v-icon>mdi-stop</v-icon>
+        <!-- Завершить -->
       </v-btn>
       <!-- <v-btn
         @click="nextExercise"
@@ -185,20 +185,19 @@ const percentRemaining = computed(() => {
     </div>
     <div v-if="isPlayerPaused">
       <v-btn
-        icon
         color="indigo"
-        size="x-large"
+        size="large"
         variant="tonal"
         density="comfortable"
         class="mx-2"
         @click="countinuePlayer"
       >
-        <v-icon>mdi-play</v-icon>
+        <!-- <v-icon>mdi-play</v-icon> -->
+        Повторить
       </v-btn>
       <v-btn
-        icon
         color="error"
-        size="x-large"
+        size="large"
         variant="tonal"
         density="comfortable"
         class="mx-2"
@@ -208,7 +207,7 @@ const percentRemaining = computed(() => {
       </v-btn>
     </div>
   </div>
-  <div class="w-100"><v-divider></v-divider></div>
+  <div class="w-100 mt-2"><v-divider></v-divider></div>
   <div class="pt-2 text-caption w-100 d-flex justify-space-between">
     <p>Всего упражнений: {{ totalSelectedExercises }}</p>
     <v-divider vertical class="mx-1"></v-divider>
