@@ -283,7 +283,7 @@ const handleClearGroup = (group: Group) => {
 }
 
 const formatTime = (totalTime: number): string => {
-  const totalSeconds = Math.floor(totalTime / 1000)
+  const totalSeconds = Math.ceil(totalTime / 1000)
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
 
@@ -753,16 +753,28 @@ watch([isInProgressExercise, isInProgressPause], () => {
                                                 Общее время:</span
                                               ><span>{{
                                                 formatTime(
-                                                  element.pause * element.sets +
-                                                    element.repetitionDuration *
-                                                      element.repetitionsPerSet.reduce(
-                                                        (
-                                                          sum: number,
-                                                          current: number
-                                                        ) => sum + current,
-                                                        0
-                                                      ) *
-                                                      element.sets
+                                                  element.repetitionsPerSet.reduce(
+                                                    (
+                                                      acc: number,
+                                                      reps: number,
+                                                      index: number
+                                                    ) => {
+                                                      const setTime =
+                                                        reps *
+                                                        element.repetitionDuration
+                                                      const pauseTime =
+                                                        index <
+                                                        element.sets.length - 1
+                                                          ? element.pause
+                                                          : 0
+                                                      return (
+                                                        acc +
+                                                        setTime +
+                                                        pauseTime
+                                                      )
+                                                    },
+                                                    0
+                                                  )
                                                 )
                                               }}</span>
                                             </p>

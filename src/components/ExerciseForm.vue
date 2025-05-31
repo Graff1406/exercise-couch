@@ -64,7 +64,6 @@
             item-value="value"
             label="Длительность паузы"
             hint="Длительность длинной паузы в минутах и секундах"
-            :rules="[rules.required]"
           >
           </v-select>
 
