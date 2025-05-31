@@ -585,12 +585,13 @@ watch([isInProgressExercise, isInProgressPause], () => {
 <template>
   <v-responsive>
     <v-app>
-      <v-app-bar class="px-2" elevation="0">
+      <v-app-bar class="px-2" elevation="1" density="compact" flat>
         <v-btn
           color="indigo"
           @click="$emit('toggleDrawer')"
           icon="mdi-weight-lifter"
           variant="tonal"
+          density="compact"
         ></v-btn>
 
         <v-spacer></v-spacer>
@@ -602,11 +603,12 @@ watch([isInProgressExercise, isInProgressPause], () => {
           size="large"
           variant="tonal"
           prepend-icon="mdi-plus"
+          density="compact"
         >
           Упражнение
         </v-btn>
       </v-app-bar>
-      <v-main class="bg-indigo-lighten-5">
+      <v-main>
         <v-container fluid class="pa-0">
           <ExerciseForm
             v-model="showForm"
@@ -628,7 +630,7 @@ watch([isInProgressExercise, isInProgressPause], () => {
             chosen-class="chosen"
             @end="onDrop"
           >
-            <template #item="{ element }">
+            <template #item="{ element, index }">
               <v-row
                 no-gutters
                 class="drag-handle d-flex flex-column pa-3 pb-0"
@@ -870,7 +872,10 @@ watch([isInProgressExercise, isInProgressPause], () => {
                   </v-card>
                 </v-col>
 
-                <v-divider class="mt-3"></v-divider>
+                <v-divider
+                  v-if="groups.length !== index + 1"
+                  class="mt-3"
+                ></v-divider>
               </v-row>
             </template>
           </draggable>
