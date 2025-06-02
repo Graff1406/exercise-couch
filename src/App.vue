@@ -394,12 +394,12 @@ async function runExercise(
         await new Promise((resolve) => setTimeout(resolve, 600))
         countdownBeforeStartInSeconds--
       }
-      await speak('Старт', { rate: 1.3 })
     }
 
     // Start exercise
 
     audio.play('melodies/melody_1.mp3')
+    await speak('Старт', { rate: 1.3 })
 
     startCountdown(repetitionDuration * repetitions, (time: number) => {
       countdown.value = time * 1000
@@ -430,16 +430,18 @@ async function runExercise(
 
     isInProgressExercise.value = false
 
+    if (audioEnd) {
+      await speak('Конец упражнения')
+    }
+
     // End exercise
 
     // Start pause
 
-    if (isPause) {
-      isInProgressPause.value = true
+    const puseInsecond = pause / 1000
 
-      if (audioEnd) {
-        await speak('Конец упражнения')
-      }
+    if (isPause && puseInsecond) {
+      isInProgressPause.value = true
 
       if (isLastExerciseInCurrentSet) await speak('Конец текущего сета')
 
@@ -447,8 +449,6 @@ async function runExercise(
       //   !isLastExercisePauseUsed.value && isLastExerciseInCurrentSet
       //     ? pauseBetweenSets.value / 1000
       //     : pause / 1000
-
-      const puseInsecond = pause / 1000
 
       if (announcePauseDuration) await speak(`Пауза ${puseInsecond} секунд`)
 
