@@ -73,6 +73,21 @@ const speak = (text: string, { rate = 1 } = { rate: 1 }): Promise<void> => {
   }
 }
 
+const beep = (duration = 200, frequency = 440, volume = 0.7) => {
+  const context = new AudioContext()
+  const oscillator = context.createOscillator()
+  const gain = context.createGain()
+
+  oscillator.connect(gain)
+  gain.connect(context.destination)
+
+  oscillator.frequency.value = frequency
+  gain.gain.value = volume
+
+  oscillator.start()
+  oscillator.stop(context.currentTime + duration / 1000)
+}
+
 const calculateSpeechRate = (exerciseSpeed: number): number => {
   // Нормализуем к диапазону 500-3000 мс (0.5-3 сек)
   const minSpeed = 500
@@ -135,6 +150,7 @@ const pauseCountRepetition = (
 const toggleForm = () => {
   showForm.value = !showForm.value
 }
+
 const closeForm = () => {
   showForm.value = false
   editMode.value = false
@@ -290,6 +306,8 @@ const formatTime = (totalTime: number): string => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
+// Computeds
+
 const totalSelectedExercises = computed(() => {
   return selectedExercises.value.length
 })
@@ -423,6 +441,9 @@ async function runExercise(
         speak('Половина', { rate })
       } else {
         speak(`${count}`, { rate })
+        if (repetitions > 3 && count > repetitions - 3) {
+          beep(150, 600, 0.2)
+        }
       }
     })
 
