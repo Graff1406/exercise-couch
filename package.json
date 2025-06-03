@@ -1,5 +1,5 @@
 {
-  "name": "myapp",
+  "name": "Exercise-speacker-couch",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/cli": "^7.2.0",
+    "@capacitor/core": "^7.2.0",
     "@mdi/font": "^7.4.47",
     "vue": "^3.5.13",
     "vuedraggable": "^4.1.0",
