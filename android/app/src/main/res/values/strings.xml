@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name"> Exercise-speacker-couch</string>
+    <string name="title_activity_main"> Exercise-speacker-couch</string>
+    <string name="package_name">esc.test.app</string>
+    <string name="custom_url_scheme">esc.test.app</string>
+</resources>

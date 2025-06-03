@@ -48,7 +48,6 @@ const draggableGroups = ref<Group[]>([])
 
 // const pauseBetweenSets = ref(saved ? Number(saved) : 0)
 
-const utterance = new SpeechSynthesisUtterance()
 let countRepetitionInterval: ReturnType<typeof setInterval> | null = null
 
 const loadExercises = () => {
