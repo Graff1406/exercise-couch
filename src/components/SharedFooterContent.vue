@@ -112,7 +112,7 @@ const progress = computed(() => {
               {{ nextExerciseInCurrentSet?.exerciseName }}
             </p>
 
-            <p v-else class="text-h5 text-uppercase">Конец Сета</p>
+            <p v-else>Конец Сета</p>
           </div>
         </div>
 
