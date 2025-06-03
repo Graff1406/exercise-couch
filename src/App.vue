@@ -107,24 +107,25 @@ const calculateSpeechRate = (exerciseSpeed: number): number => {
 
 const startCountRepetition = (interval: number = 1000, repetitions: number) => {
   let count = 0
+  let isStopped = false
+
+  const counter = async (callbackProcessing?: (count: number) => void) => {
+    while (count < repetitions) {
+      await waitWhilePaused()
+
+      count++
+      if (callbackProcessing) callbackProcessing(count)
+
+      await new Promise((resolve) => setTimeout(resolve, interval))
+
+      if (isStopped) break
+    }
+  }
 
   return {
-    counter: (callbackProcessing?: (count: number) => void) => {
-      return new Promise((resolve) => {
-        count++
-        if (callbackProcessing) callbackProcessing(count)
-
-        countRepetitionInterval = setInterval(() => {
-          count++
-          if (count <= repetitions) {
-            if (callbackProcessing) callbackProcessing(count)
-          } else {
-            clearInterval(countRepetitionInterval!)
-            countRepetitionInterval = null
-            resolve(true)
-          }
-        }, interval)
-      })
+    counter,
+    stop: () => {
+      isStopped = true
     }
   }
 }
@@ -158,27 +159,26 @@ const closeForm = () => {
   editExercise.value = null
 }
 
-const startCountdown = (
+async function startCountdown(
   time: number,
   callbackProcessing?: (countdown: number) => void,
   interval: number = 1000
-) => {
+): Promise<void> {
   let countdown = time / 1000
 
-  return new Promise((resolve) => {
-    if (callbackProcessing) callbackProcessing(countdown) // вызов сразу
+  if (callbackProcessing) callbackProcessing(countdown)
 
-    countdownInterval.value = setInterval(() => {
-      countdown -= 1
-      if (countdown >= 0) {
-        if (callbackProcessing) callbackProcessing(countdown)
-      } else {
-        clearInterval(countdownInterval.value!)
-        countdownInterval.value = null
-        resolve(true)
-      }
-    }, interval)
-  })
+  while (countdown > 0) {
+    await waitWhilePaused()
+
+    await new Promise((resolve) => setTimeout(resolve, interval))
+
+    countdown--
+
+    if (callbackProcessing) callbackProcessing(countdown)
+  }
+
+  return
 }
 
 const pauseCountdown = () => {
@@ -194,12 +194,13 @@ const resetCountdown = () => {
 }
 
 const startPlayer = async (exercises: Exercise[]) => {
+  playerState.value = 'playing'
+  console.log('🚀 ~ countinuePlayer ~ playerState.value:', playerState.value)
   // Check if selectRef exists and has a validate method before calling it
   if (selectRef.value && 'validate' in selectRef.value) {
     const erros = await (selectRef.value as any).validate()
     if (erros?.length) return // Stop if validation fails
   }
-  playerState.value = 'playing'
   isTrainingStarted.value = true
   selectedExercises.value = exercises
   runExercises()
@@ -207,6 +208,7 @@ const startPlayer = async (exercises: Exercise[]) => {
 
 const countinuePlayer = () => {
   playerState.value = 'playing'
+  console.log('🚀 ~ countinuePlayer ~ playerState.value:', playerState.value)
 
   if (backgroundAudio.value) backgroundAudio.value.play()
   speechSynthesis.resume()
@@ -214,6 +216,7 @@ const countinuePlayer = () => {
 
 const pausePlayer = async () => {
   playerState.value = 'paused'
+  console.log('🚀 ~ pausePlayer ~ playerState.value:', playerState.value)
   if (backgroundAudio.value) {
     backgroundAudio.value.pause()
   }
@@ -243,13 +246,21 @@ const resetPlayer = () => {
 
 const playBackgroundAudio = () => {
   return {
-    play: (src: string, { volume = 0.3 } = {}) => {
+    play: async (src: string, { volume = 0.3 } = {}) => {
       if (!backgroundAudio.value) return
-      backgroundAudio.value.volume = volume
+
+      backgroundAudio.value.pause()
+
       backgroundAudio.value.src = src
-      backgroundAudio.value.load()
-      backgroundAudio.value.play()
+      backgroundAudio.value.volume = volume
+
+      try {
+        await backgroundAudio.value.play()
+      } catch (err) {
+        console.warn(err)
+      }
     },
+
     stop: () => {
       if (!backgroundAudio.value) return
       backgroundAudio.value.pause()
@@ -366,6 +377,23 @@ const groups = computed(() => {
   return Object.values(groupObj)
 })
 
+async function waitWhilePaused(): Promise<void> {
+  return new Promise((resolve) => {
+    if (playerState.value !== 'paused') {
+      resolve()
+      return
+    }
+
+    const stop = watch(playerState, function (val) {
+      console.log('🚀 ~ stop ~ playerState:', val)
+      if (val !== 'paused') {
+        stop()
+        resolve()
+      }
+    })
+  })
+}
+
 async function runExercise(
   exercise: Exercise | null,
   isPause: boolean,
@@ -386,6 +414,8 @@ async function runExercise(
   const announcePauseDuration = exercise.announcePauseDuration
   const announcePauseEnd = exercise.announcePauseEnd
   const repetitionDuration = exercise.repetitionDuration
+
+  await waitWhilePaused()
 
   const audio = playBackgroundAudio()
 
@@ -410,10 +440,9 @@ async function runExercise(
     }
 
     // Start exercise
-
     audio.play('melodies/melody_1.mp3')
-    await speak('Старт', { rate: 1.3 })
 
+    await speak('Старт', { rate: 1.3 })
     startCountdown(repetitionDuration * repetitions, (time: number) => {
       countdown.value = time * 1000
     })
@@ -421,7 +450,6 @@ async function runExercise(
     const repetition = startCountRepetition(repetitionDuration, repetitions)
 
     await repetition.counter(async (count: number) => {
-      exerciseRepetitionCount.value = count
       const rate = calculateSpeechRate(repetitionDuration)
 
       if (repetitions > 8 && repetitions - 1 === count && audioBeforeEnd) {
@@ -435,18 +463,21 @@ async function runExercise(
       ) {
         speak('Половина', { rate })
       } else {
+        await waitWhilePaused()
         speak(`${count}`, { rate })
         if (repetitions > 3 && count > repetitions - 3) {
-          beep(150, 600, 0.2)
+          const leftCount = count - (repetitions - 3)
+          beep(150, leftCount * 500, 0.3)
         }
       }
+      exerciseRepetitionCount.value = count
     })
 
     audio.stop()
 
     isInProgressExercise.value = false
-
     if (audioEnd) {
+      exerciseRepetitionCount.value = 0
       await speak('Конец упражнения')
     }
 
@@ -455,25 +486,19 @@ async function runExercise(
     // Start pause
 
     const puseInsecond = pause / 1000
-
     if (isPause && puseInsecond) {
       isInProgressPause.value = true
-
       if (isLastExerciseInCurrentSet) await speak('Конец текущего сета')
 
       // const puseInsecond =
       //   !isLastExercisePauseUsed.value && isLastExerciseInCurrentSet
       //     ? pauseBetweenSets.value / 1000
       //     : pause / 1000
-
       if (announcePauseDuration) await speak(`Пауза ${puseInsecond} секунд`)
-
       startCountdown(pause, (time: number) => {
         countdown.value = time * 1000
       })
-
       audio.play('melodies/timer-tiking.mp3', { volume: 0.8 })
-
       if (pause > 5000 && nextExercise?.exerciseName) {
         setTimeout(() => {
           speak('Следующее упражнение ' + nextExercise.exerciseName)
@@ -506,6 +531,8 @@ async function runExercises() {
     if (!isTrainingStarted.value) break
 
     for (let i = 0; i < currentExercises.length; i++) {
+      await waitWhilePaused()
+
       if (!isTrainingStarted.value) break
 
       const currentExercise = currentExercises[i]
@@ -594,16 +621,6 @@ watch(
   },
   { immediate: true }
 )
-
-// watch(isLastExercisePauseUsed, (pause: boolean) => {
-//   if (pause) {
-//     pauseBetweenSets.value = 0
-//   }
-// })
-
-// watch(pauseBetweenSets, (pause: number) => {
-//   localStorage.setItem('pauseBetweenSets', pause.toString())
-// })
 </script>
 
 <template>

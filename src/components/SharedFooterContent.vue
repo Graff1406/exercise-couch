@@ -82,37 +82,33 @@ const percentRemaining = computed(() => {
 
   return (current / total) * 100
 })
+
+const progress = computed(() => {
+  const x = props.exerciseInProgress?.repetitions || 0
+  const y = props.exerciseRepetitionCount || 0
+  return ((x - y) / x) * 100
+})
 </script>
 
 <template>
   <div class="pb-1 w-100">
     <div v-show="isPlayerStarted || isPlayerPaused" class="pb-3">
-      <div class="d-flex align-center justify-space-between mb-2">
-        <div>
+      <div class="d-flex align-center mb-2">
+        <div class="flex-grow-1">
           <p :title="exerciseInProgress?.exerciseName">
-            <span class="text-h5 text-uppercase">
+            <span class="text-h5">
               {{
                 isInProgressPause && exerciseInProgress
                   ? 'Пауза'
                   : exerciseInProgress?.exerciseName
               }}
             </span>
-            <strong
-              ><p>
-                <span>{{ exerciseRepetitionCount }}</span>
-                <span>/</span>
-                <span>{{ exerciseInProgress?.repetitions }}</span>
-              </p></strong
-            >
           </p>
 
           <v-divider class="my-4"></v-divider>
 
-          <div>
-            <p
-              v-if="nextExerciseInCurrentSet?.id"
-              class="text-h5 text-uppercase"
-            >
+          <div class="text-body-2">
+            <p v-if="nextExerciseInCurrentSet?.id">
               {{ nextExerciseInCurrentSet?.exerciseName }}
             </p>
 
@@ -120,16 +116,23 @@ const percentRemaining = computed(() => {
           </div>
         </div>
 
-        <div>
+        <div class="flex-none ml-4">
           <v-progress-circular
-            :model-value="percentRemaining"
+            :model-value="isInProgressPause ? percentRemaining : progress"
             :rotate="360"
             :size="80"
             :width="10"
             :color="isInProgressPause ? 'warning' : 'indigo'"
-            class="ml-4 flex-shrink-0"
+            class="flex-shrink-0"
           >
-            {{ inProgressPoint }}
+            <p v-if="isInProgressPause && exerciseInProgress">
+              {{ inProgressPoint }}
+            </p>
+            <p v-else>
+              <span>{{ exerciseRepetitionCount }}</span>
+              <span>/</span>
+              <span>{{ exerciseInProgress?.repetitions }}</span>
+            </p>
           </v-progress-circular>
         </div>
       </div>
