@@ -43,6 +43,7 @@ const currentIndex = ref(0)
 const exerciseRepetitionCount = ref(0)
 const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const selectedExercises = ref<Exercise[]>([])
+const draggableGroups = ref<Group[]>([])
 
 // const pauseBetweenSets = ref(saved ? Number(saved) : 0)
 
@@ -256,14 +257,8 @@ const playBackgroundAudio = () => {
   }
 }
 
-const onDrop = (dropResult: any) => {
-  if (dropResult.removedIndex !== null && dropResult.addedIndex !== null) {
-    exercises.value.splice(
-      dropResult.addedIndex,
-      0,
-      exercises.value.splice(dropResult.removedIndex, 1)[0]
-    )
-  }
+const onDrop = () => {
+  draggableGroups.value = JSON.parse(JSON.stringify(draggableGroups.value))
 }
 
 const handleEdit = (exercise: Exercise) => {
@@ -592,6 +587,14 @@ watch([isInProgressExercise, isInProgressPause], () => {
   countdown.value = 0
 })
 
+watch(
+  () => groups.value,
+  (newGroups) => {
+    draggableGroups.value = JSON.parse(JSON.stringify(newGroups))
+  },
+  { immediate: true }
+)
+
 // watch(isLastExercisePauseUsed, (pause: boolean) => {
 //   if (pause) {
 //     pauseBetweenSets.value = 0
@@ -641,8 +644,8 @@ watch([isInProgressExercise, isInProgressPause], () => {
           />
 
           <draggable
-            v-if="groups.length"
-            v-model="groups"
+            v-if="draggableGroups.length"
+            v-model="draggableGroups"
             item-key="id"
             :animation="200"
             :delay="200"
