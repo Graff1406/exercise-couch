@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import {
   VCard,
   VCardText,
@@ -55,22 +56,24 @@ const loadExercises = () => {
   exercises.value = storedExercises ? JSON.parse(storedExercises) : []
 }
 
-const speak = (text: string, { rate = 1 } = { rate: 1 }): Promise<void> => {
-  const handler = (resolve: () => void) => {
-    utterance.rate = rate
-    utterance.text = text
-    utterance.onend = () => resolve()
-    speechSynthesis.speak(utterance)
+const speak = async (
+  text: string,
+  { rate = 1 } = { rate: 1 }
+): Promise<void> => {
+  if (playerState.value === 'reset') {
+    return
   }
 
   try {
-    if (playerState.value === 'reset') {
-      return Promise.resolve()
-    }
-    return new Promise<void>(handler)
+    await TextToSpeech.speak({
+      text,
+      lang: 'ru-RU',
+      rate,
+      pitch: 1.0,
+      volume: 1.0
+    })
   } catch (error) {
-    console.error('Speech synthesis error:', error)
-    return new Promise<void>(handler)
+    console.error('TextToSpeech error:', error)
   }
 }
 
