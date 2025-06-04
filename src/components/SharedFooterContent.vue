@@ -61,7 +61,7 @@ function timeStringToMilliseconds(timeStr: string): number {
 }
 
 // Computed properties
-const isPlayerStarted = computed(() => props.playerState === 'playing')
+const isPlayerStarted = computed(() => props.playerState === 'running')
 const isPlayerPaused = computed(() => props.playerState === 'paused')
 
 const duractionCurrentPoint = computed(() => {

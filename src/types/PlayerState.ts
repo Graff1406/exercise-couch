@@ -1,1 +1,1 @@
-export type PlayerState = 'idle' | 'playing' | 'paused' | 'reset'
+export type PlayerState = 'idle' | 'running' | 'paused' | 'reset'
