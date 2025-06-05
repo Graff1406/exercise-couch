@@ -57,8 +57,7 @@ const {
   waitWhilePaused
 } = usePauseDurationOptions(playerState)
 
-const { loadAudioPlayer, pauseAudioPlayer, stopAudioPlayer } =
-  useAudioPlayer(playerState)
+const { loadAudioPlayer, stopAudioPlayer } = useAudioPlayer(playerState)
 
 // const pauseBetweenSets = ref(saved ? Number(saved) : 0)
 
@@ -433,23 +432,23 @@ async function runExercise(
 
   try {
     isInProgressExercise.value = true
-    // if (audioStart) {
-    //   await speak('Упражнение ' + exerciseName + ' начинается ', { rate: 1.3 })
-    // }
+    if (audioStart) {
+      await speak('Упражнение ' + exerciseName + ' начинается ', { rate: 1.3 })
+    }
 
-    // if (audioQuantityExercise) {
-    //   await speak(`Количество повторений ${repetitions}`, { rate: 1.3 })
-    // }
+    if (audioQuantityExercise) {
+      await speak(`Количество повторений ${repetitions}`, { rate: 1.3 })
+    }
 
-    // if (countdownBeforeStart) {
-    //   let countdownBeforeStartInSeconds = 3
+    if (countdownBeforeStart) {
+      let countdownBeforeStartInSeconds = 3
 
-    //   while (countdownBeforeStartInSeconds > 0) {
-    //     await speak(countdownBeforeStartInSeconds.toString())
-    //     await new Promise((resolve) => setTimeout(resolve, 600))
-    //     countdownBeforeStartInSeconds--
-    //   }
-    // }
+      while (countdownBeforeStartInSeconds > 0) {
+        await speak(countdownBeforeStartInSeconds.toString())
+        await new Promise((resolve) => setTimeout(resolve, 600))
+        countdownBeforeStartInSeconds--
+      }
+    }
 
     // Start exercise
     loadAudioPlayer('melodies/melody_1.mp3')
