@@ -43,7 +43,7 @@ const editExercise = ref<Exercise | null>(null)
 const countdown = ref(0)
 const currentIndex = ref(0)
 const exerciseRepetitionCount = ref(0)
-const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
+// const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const selectedExercises = ref<Exercise[]>([])
 const draggableGroups = ref<Group[]>([])
 
@@ -196,17 +196,17 @@ const closeForm = () => {
 //   return
 // }
 
-const pauseCountdown = () => {
-  if (countdownInterval.value) {
-    clearInterval(countdownInterval.value)
-    countdownInterval.value = null
-  }
-}
+// const pauseCountdown = () => {
+//   if (countdownInterval.value) {
+//     clearInterval(countdownInterval.value)
+//     countdownInterval.value = null
+//   }
+// }
 
-const resetCountdown = () => {
-  pauseCountdown()
-  countdown.value = 0
-}
+// const resetCountdown = () => {
+//   pauseCountdown()
+//   countdown.value = 0
+// }
 
 const startPlayer = async (exercises: Exercise[]) => {
   if (playerState.value === 'idle') {
