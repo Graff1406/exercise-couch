@@ -1,14 +1,9 @@
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
-import { CapacitorMusicControls } from 'capacitor-music-controls-plugin'
 
 import { type Ref, watchEffect, watch } from 'vue'
 import type { PlayerState } from '../types/PlayerState'
 
-let backgroundAudioIdCounter = 0
-
 export function usePauseDurationOptions(status: Ref<PlayerState>) {
-  const activeAudioMap = new Map<number, { stop: () => void }>()
-
   const waitWhilePaused = (): Promise<void> => {
     return new Promise((resolve) => {
       if (status.value !== 'paused') {
@@ -64,83 +59,6 @@ export function usePauseDurationOptions(status: Ref<PlayerState>) {
 
     oscillator.start()
     oscillator.stop(context.currentTime + duration / 1000)
-  }
-
-  const audioPlayer = async (
-    src: string,
-    { volume = 0.3 } = {}
-  ): Promise<{ id: number; stop: () => void }> => {
-    if (status.value === 'reset') return { id: -1, stop: () => {} }
-
-    await waitWhilePaused() // дождись пока не выйдет из паузы
-
-    const id = ++backgroundAudioIdCounter
-
-    const audio = new Audio(src)
-    audio.volume = volume
-    audio.loop = false
-
-    try {
-      await audio.play()
-    } catch (err) {
-      console.warn('Ошибка при воспроизведении аудио:', err)
-    }
-
-    CapacitorMusicControls.create({
-      track: 'Название трека',
-      artist: 'Исполнитель',
-      cover: 'путь/к/обложке.jpg',
-      isPlaying: true,
-      dismissable: false,
-      hasPrev: false,
-      hasNext: false,
-      hasClose: true
-    })
-
-    CapacitorMusicControls.addListener('musicControlsEvent', (event) => {
-      switch (event.action) {
-        case 'music-controls-pause':
-          audio.pause()
-          CapacitorMusicControls.updateIsPlaying({ isPlaying: false })
-          break
-        case 'music-controls-play':
-          audio.play()
-          CapacitorMusicControls.updateIsPlaying({ isPlaying: true })
-          break
-        case 'music-controls-destroy':
-          audio.pause()
-          audio.currentTime = 0
-          CapacitorMusicControls.destroy()
-          break
-        default:
-          break
-      }
-    })
-
-    // ⏸ Реакция на изменение status
-    const unwatch = watch(status, (newStatus) => {
-      if (newStatus === 'paused') {
-        audio.pause()
-        CapacitorMusicControls.updateIsPlaying({ isPlaying: false })
-      } else if (newStatus === 'running') {
-        audio.play()
-        CapacitorMusicControls.updateIsPlaying({ isPlaying: true })
-      } else if (newStatus === 'reset') {
-        stop()
-      }
-    })
-
-    const stop = () => {
-      audio.pause()
-      audio.currentTime = 0
-      CapacitorMusicControls.destroy()
-      activeAudioMap.delete(id)
-      unwatch()
-    }
-
-    activeAudioMap.set(id, { stop })
-
-    return { id, stop }
   }
 
   const countdownExerciseOrPause = async (
@@ -234,7 +152,6 @@ export function usePauseDurationOptions(status: Ref<PlayerState>) {
   return {
     beep,
     speak,
-    audioPlayer,
     countdownExerciseOrPause,
     startCountRepetition,
     waitWhilePaused

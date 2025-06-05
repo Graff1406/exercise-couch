@@ -20,6 +20,7 @@ import { type Exercise } from './types/Exercise'
 import { type PlayerState } from './types/PlayerState'
 import { type Group } from './types/Group'
 import { usePauseDurationOptions } from './composables/useExerciseFlow'
+import { useAudioPlayer } from './composables/useAudioPlayer'
 
 // const { pauseDurationOptions } = usePauseDurationOptions()
 // const saved = localStorage.getItem('pauseBetweenSets')
@@ -46,14 +47,18 @@ const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const selectedExercises = ref<Exercise[]>([])
 const draggableGroups = ref<Group[]>([])
 
+// Composabels
+
 const {
   beep,
   speak,
-  audioPlayer,
   countdownExerciseOrPause,
   startCountRepetition,
   waitWhilePaused
 } = usePauseDurationOptions(playerState)
+
+const { loadAudioPlayer, pauseAudioPlayer, stopAudioPlayer } =
+  useAudioPlayer(playerState)
 
 // const pauseBetweenSets = ref(saved ? Number(saved) : 0)
 
@@ -205,9 +210,9 @@ const resetCountdown = () => {
 }
 
 const startPlayer = async (exercises: Exercise[]) => {
-  if ((playerState.value = 'idle')) {
+  if (playerState.value === 'idle') {
     playerState.value = 'running'
-    console.log('idle', playerState.value)
+    console.log('startPlayer', playerState.value)
     // Check if selectRef exists and has a validate method before calling it
     if (selectRef.value && 'validate' in selectRef.value) {
       const erros = await (selectRef.value as any).validate()
@@ -216,15 +221,15 @@ const startPlayer = async (exercises: Exercise[]) => {
     isTrainingStarted.value = true
     selectedExercises.value = exercises
     runExercises()
-  } else if (playerState.value === 'paused') {
-    console.log('paused', playerState.value)
+  } else {
+    console.log('startPlayer --> paused', playerState.value)
     playerState.value = 'running'
   }
 }
 
 const countinuePlayer = () => {
   playerState.value = 'running'
-  console.log('🚀 ~ countinuePlayer ~ playerState.value:', playerState.value)
+  console.log('🚀 ~ countinuePlayer', playerState.value)
 
   if (backgroundAudio.value) backgroundAudio.value.play()
   speechSynthesis.resume()
@@ -237,6 +242,8 @@ const pausePlayer = async () => {
 
 const resetPlayer = () => {
   playerState.value = 'reset'
+
+  console.log('resetPlayer', playerState.value)
   // Stop background audio and clear vocalizations
   if (backgroundAudio.value) {
     backgroundAudio.value.load()
@@ -426,29 +433,26 @@ async function runExercise(
 
   try {
     isInProgressExercise.value = true
-    if (audioStart) {
-      await speak('Упражнение ' + exerciseName + ' начинается ', { rate: 1.3 })
-    }
+    // if (audioStart) {
+    //   await speak('Упражнение ' + exerciseName + ' начинается ', { rate: 1.3 })
+    // }
 
-    if (audioQuantityExercise) {
-      await speak(`Количество повторений ${repetitions}`, { rate: 1.3 })
-    }
+    // if (audioQuantityExercise) {
+    //   await speak(`Количество повторений ${repetitions}`, { rate: 1.3 })
+    // }
 
-    if (countdownBeforeStart) {
-      let countdownBeforeStartInSeconds = 3
+    // if (countdownBeforeStart) {
+    //   let countdownBeforeStartInSeconds = 3
 
-      while (countdownBeforeStartInSeconds > 0) {
-        await speak(countdownBeforeStartInSeconds.toString())
-        await new Promise((resolve) => setTimeout(resolve, 600))
-        countdownBeforeStartInSeconds--
-      }
-    }
+    //   while (countdownBeforeStartInSeconds > 0) {
+    //     await speak(countdownBeforeStartInSeconds.toString())
+    //     await new Promise((resolve) => setTimeout(resolve, 600))
+    //     countdownBeforeStartInSeconds--
+    //   }
+    // }
 
     // Start exercise
-    const { stop: stopAudioPlayerExercise } = await audioPlayer(
-      'melodies/melody_1.mp3',
-      { volume: 0.3 }
-    )
+    loadAudioPlayer('melodies/melody_1.mp3')
 
     await speak('Старт', { rate: 1.3 })
 
@@ -480,7 +484,7 @@ async function runExercise(
       exerciseRepetitionCount.value = count
     })
 
-    stopAudioPlayerExercise()
+    stopAudioPlayer()
 
     isInProgressExercise.value = false
     if (audioEnd) {
@@ -505,10 +509,7 @@ async function runExercise(
 
       countdownExerciseOrPause(pause, countdown)
 
-      const { stop: stopAudioPlayerPause } = await audioPlayer(
-        'melodies/timer-tiking.mp3',
-        { volume: 0.3 }
-      )
+      loadAudioPlayer('melodies/timer-tiking.mp3')
 
       if (pause > 5000 && nextExercise?.exerciseName) {
         setTimeout(() => {
@@ -518,7 +519,7 @@ async function runExercise(
 
       await pauseCountRepetition(puseInsecond)
 
-      stopAudioPlayerPause()
+      stopAudioPlayer()
 
       isInProgressPause.value = false
 
@@ -941,7 +942,7 @@ watch(
       </v-main>
       <audio ref="backgroundAudio" loop></audio>
       <v-bottom-sheet
-        v-model="isTrainingStarted"
+        :modelValue="playerState === 'running'"
         @update:model-value="pausePlayer"
       >
         <v-card
