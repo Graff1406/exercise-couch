@@ -229,9 +229,6 @@ const startPlayer = async (exercises: Exercise[]) => {
 const countinuePlayer = () => {
   playerState.value = 'running'
   console.log('🚀 ~ countinuePlayer', playerState.value)
-
-  if (backgroundAudio.value) backgroundAudio.value.play()
-  speechSynthesis.resume()
 }
 
 const pausePlayer = async () => {
@@ -240,14 +237,11 @@ const pausePlayer = async () => {
 }
 
 const resetPlayer = () => {
-  playerState.value = 'reset'
+  playerState.value = 'idle'
 
   console.log('resetPlayer', playerState.value)
-  // Stop background audio and clear vocalizations
-  if (backgroundAudio.value) {
-    backgroundAudio.value.load()
-  }
-  speechSynthesis.cancel()
+  window.location.reload()
+
   exerciseInProgress.value = null
   currentIndex.value = 0
   isInProgressPause.value = false
@@ -256,7 +250,6 @@ const resetPlayer = () => {
   selectedExercises.value = []
   clearInterval(countRepetitionInterval!)
   countRepetitionInterval = null
-  resetCountdown()
 }
 
 // const playBackgroundAudio = () => {

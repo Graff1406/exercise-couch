@@ -21,7 +21,7 @@ export function usePauseDurationOptions(status: Ref<PlayerState>) {
   }
 
   const speak = async (text: string, { rate = 1 } = {}): Promise<void> => {
-    if (status.value === 'reset') return
+    if (status.value === 'reset' || status.value === 'idle') return
 
     await waitWhilePaused()
 
@@ -41,9 +41,9 @@ export function usePauseDurationOptions(status: Ref<PlayerState>) {
   const beep = async (
     duration = 200,
     frequency = 440,
-    volume = 0.7
+    volume = 1
   ): Promise<void> => {
-    if (status.value === 'reset') return
+    if (status.value === 'reset' || status.value === 'idle') return
 
     await waitWhilePaused()
 
@@ -87,7 +87,7 @@ export function usePauseDurationOptions(status: Ref<PlayerState>) {
       if (timerId) return
       timerId = setInterval(() => {
         if (status.value === 'paused') return
-        if (status.value === 'reset') {
+        if (status.value === 'reset' || status.value === 'idle') {
           clearInterval(timerId!)
           timerId = null
           target.value = 0
@@ -103,7 +103,7 @@ export function usePauseDurationOptions(status: Ref<PlayerState>) {
     const stopWatch = watch(
       status,
       (val) => {
-        if (val === 'reset') {
+        if (val === 'reset' || status.value === 'idle') {
           clearInterval(timerId!)
           timerId = null
           target.value = 0
