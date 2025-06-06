@@ -278,6 +278,8 @@ const resetPlayer = () => {
 
 const onDrop = () => {
   draggableGroups.value = JSON.parse(JSON.stringify(draggableGroups.value))
+  console.log('🚀 ~ onDrop ~ draggableGroups.value:', draggableGroups.value)
+  // localStorage.setItem('exercises', JSON.stringify(draggableGroups.value))
 }
 
 const handleEdit = (exercise: Exercise) => {
@@ -369,7 +371,7 @@ const groups = computed(() => {
   const groupObj: Record<number, Group & { exercises: Exercise[] }> = {}
 
   for (const exercise of exercises.value) {
-    const { id, name } = exercise.group
+    const { id, name } = exercise?.group ?? {}
 
     if (!groupObj[id]) {
       groupObj[id] = {

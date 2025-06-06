@@ -13,6 +13,7 @@ export function useAudioPlayer(status: Ref<PlayerState>) {
     }
     audio.value = new Audio(src)
     audio.value.volume = 0.3
+    audio.value.loop = true
     source.value = src
 
     audio.value.play().catch((err) => {
