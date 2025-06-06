@@ -38,6 +38,7 @@ const isTrainingStarted = ref(false)
 const playerState = ref<PlayerState>('idle')
 const editMode = ref(false)
 const exerciseInProgress = ref<Exercise | null>(null)
+const inProgressExercisesGroup = ref<Group | null>(null)
 const nextExerciseInCurrentSet = ref<Exercise | null>(null)
 const editExercise = ref<Exercise | null>(null)
 const countdown = ref(0)
@@ -208,7 +209,7 @@ const closeForm = () => {
 //   countdown.value = 0
 // }
 
-const startPlayer = async (exercises: Exercise[]) => {
+const startPlayer = async (exercises: Exercise[], group: Group) => {
   if (playerState.value === 'idle') {
     playerState.value = 'running'
     console.log('startPlayer', playerState.value)
@@ -219,6 +220,7 @@ const startPlayer = async (exercises: Exercise[]) => {
     }
     isTrainingStarted.value = true
     selectedExercises.value = exercises
+    inProgressExercisesGroup.value = group
     runExercises()
   } else {
     console.log('startPlayer --> paused', playerState.value)
@@ -356,12 +358,11 @@ const inProgressPoint = computed(() => {
 
   let value = 0
 
-  if (countdown.value > 0) {
-    value = countdown.value
-  } else if (isInProgressExercise.value) {
+  if (isInProgressExercise.value) {
     value = repetitions * repetitionDuration
   } else if (isInProgressPause.value) {
-    value = pause
+    const initialCountdown = pause / 1000
+    value = pause - (initialCountdown - countdown.value) * 1000
   }
 
   return formatTime(value)
@@ -908,13 +909,56 @@ watch(
 
                     <v-divider></v-divider>
 
-                    <template v-slot:actions>
+                    <template
+                      v-if="
+                        inProgressExercisesGroup === null ||
+                        element?.id === inProgressExercisesGroup?.id
+                      "
+                      v-slot:actions
+                    >
+                      <div
+                        v-if="playerState === 'paused'"
+                        class="d-flex justify-center w-100"
+                      >
+                        <v-btn
+                          color="indigo"
+                          size="large"
+                          variant="tonal"
+                          density="comfortable"
+                          class="mx-2"
+                          @click="startPlayer(element.exercises, element)"
+                        >
+                          <!-- <v-icon>mdi-play</v-icon> -->
+                          Тренироваться
+                        </v-btn>
+                        <v-btn
+                          color="error"
+                          size="large"
+                          variant="tonal"
+                          density="comfortable"
+                          class="mx-2"
+                          @click="resetPlayer"
+                        >
+                          <v-icon>mdi-stop</v-icon>
+                        </v-btn>
+                      </div>
+                      <v-alert
+                        v-else-if="playerState === 'running'"
+                        border="start"
+                        color="indigo"
+                        variant="tonal"
+                        density="compact"
+                        class="w-100"
+                      >
+                        Тренировка выпольняется
+                      </v-alert>
                       <v-btn
+                        v-else
                         color="indigo"
                         text="Начать тренировку"
                         variant="tonal"
                         block
-                        @click="startPlayer(element.exercises)"
+                        @click="startPlayer(element.exercises, element)"
                       ></v-btn>
                     </template>
                   </v-card>
@@ -941,7 +985,7 @@ watch(
       >
         <v-card
           class="text-center"
-          height="200"
+          height="400"
           style="border-radius: 16px 16px 0 0"
         >
           <v-card-text>
